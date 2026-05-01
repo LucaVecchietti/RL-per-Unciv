@@ -5,6 +5,39 @@
 
 ---
 
+## [2026-05-01] — Sessione 6
+
+### Obiettivo sessione
+Implementare monitoring TensorBoard (`06_monitoring.md`). Setup Unciv headless (`07_unciv_setup.md`) = solo step manuali, nessun codice.
+
+### File modificati
+- `tests/test_callbacks.py` (creato — 10 test)
+- `src/utils/callbacks.py` (creato — `UncivMetricsCallback`, `ActionDistributionCallback`)
+- `src/utils/analyze_run.py` (creato — `analyze_evaluations`)
+- `train.py` (modificato — aggiunto `metrics_cb` e `action_cb` a `CallbackList`)
+
+### Fatto
+- Scritti 10 test prima dell'implementazione (TDD)
+- Implementato `UncivMetricsCallback`: logga gold/happiness/cities/turns per rollout
+- Implementato `ActionDistributionCallback`: logga frequenza azioni ogni 10k step
+- Implementato `analyze_evaluations`: legge `evaluations.npz` da EvalCallback senza TensorBoard
+- `train.py` aggiornato con i 4 callback (checkpoint, eval, metrics, action)
+- Bug trovato e corretto nei test: `num_timesteps` è plain attr in SB3 2.8.0 (non property)
+
+### Problemi incontrati
+- `logger`, `training_env` e `num_timesteps` sembravano property, ma solo `logger` e `training_env` delegano a `model`; `num_timesteps` è plain attribute → risolto settando `cb.num_timesteps` direttamente
+
+### Test
+- [x] Tutti i test passano
+- [x] Comando eseguito: `.venv/Scripts/python -m pytest tests/ -v`
+- Output: `29 passed in 2.57s`
+
+### TODO prossima sessione
+1. **Azione manuale richiesta:** seguire `07_unciv_setup.md` per installare Unciv e generare `saves/template_game.json`
+2. Dopo aver creato il template: testare `python -m pytest tests/ -v` + avviare training reale con `python train.py`
+
+---
+
 ## [2026-05-01] — Sessione 5
 
 ### Obiettivo sessione

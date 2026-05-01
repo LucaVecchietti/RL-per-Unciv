@@ -10,6 +10,7 @@ from stable_baselines3.common.callbacks import (
 )
 from stable_baselines3.common.monitor import Monitor
 from src.envs.unciv_env import UncivEnv
+from src.utils.callbacks import UncivMetricsCallback, ActionDistributionCallback
 
 
 def load_config(path: str) -> dict:
@@ -69,7 +70,10 @@ def train(config_path: str = "config/default_config.yaml", resume: str = None) -
         verbose=1,
     )
 
-    callbacks = CallbackList([checkpoint_cb, eval_cb])
+    metrics_cb = UncivMetricsCallback(verbose=0)
+    action_cb = ActionDistributionCallback(log_freq=10_000)
+
+    callbacks = CallbackList([checkpoint_cb, eval_cb, metrics_cb, action_cb])
 
     # Crea o carica modello
     if resume:
