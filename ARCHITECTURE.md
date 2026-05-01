@@ -1,4 +1,4 @@
-# ARCHITECTURE.md — Schema di funzionamento
+﻿# ARCHITECTURE.md — Schema di funzionamento
 
 ## Visione d'insieme
 
@@ -39,9 +39,17 @@ UncivEnv.step(action)
          │
          ├─► _advance_turn()
          │       │
-         │       └─► legge current_game.json
-         │           raw["turns"] += 1
-         │           scrive current_game.json
+         │       └─► legge current_game_{rank}.json
+         │           UncivSimulator.advance_turn(raw)
+         │               ├─► produzione: 3 + max(0, pop-1) prod/turno
+         │               │   completamento → builtBuildings, reset accumulatore
+         │               ├─► popolazione: food += 2(+2 Granary)
+         │               │   threshold = 10 + pop*3 → crescita
+         │               ├─► scienza: 2(+2 Library) + int(pop*0.5)
+         │               │   tech completata → next_tech da TECH_TREE
+         │               ├─► oro: +1 per città
+         │               └─► happiness: 9.0 + Monument(+1) - max(0,(pop-1)*0.5)
+         │           scrive current_game_{rank}.json
          │
          ├─► parser.parse(save_path)
          │       │
@@ -119,9 +127,9 @@ UncivEnv.step(action)
 |---|---|---|
 | `reset()` | SB3 inizio episodio | Copia template, legge stato iniziale |
 | `step(action)` | SB3 ogni turno | Applica azione, avanza turno, calcola reward |
-| `_start_new_game()` | `reset()` | Copia `saves/template_game.json` → `saves/current_game.json` |
+| `_start_new_game()` | `reset()` | Copia `saves/template_game.json` → `saves/current_game_{rank}.json` |
 | `_apply_action()` | `step()` | Scrive costruzione scelta nel JSON |
-| `_advance_turn()` | `step()` | Incrementa `turns` nel JSON (stub Fase 1) |
+| `_advance_turn()` | `step()` | Esegue `UncivSimulator.advance_turn(raw)` (Fase 1.5) |
 | `_compute_reward()` | `step()` | Delega a `src/utils/reward.py` |
 | `_is_terminated()` | `step()` | `happiness < -10` → episodio finito |
 
@@ -155,6 +163,56 @@ compute_terminal_reward(state, max_turns) → float
 
 ---
 
+### `src/utils/simulator.py`
+
+| Metodo | Input | Output | Responsabilita |
+|---|---|---|---|
+| `advance_turn(raw)` | dict JSON | dict JSON | Simula un turno completo (in-place) |
+| `_simulate_production(city)` | dict city | - | Accumula produzione, completa edificio |
+| `_simulate_population(city)` | dict city | - | Accumula cibo, cresce popolazione |
+| `_simulate_science(civ, tech)` | dict, dict | - | Accumula scienza, sblocca tech |
+| `_simulate_gold(civ, cities)` | dict, list | - | +1 oro per citta |
+| `_simulate_happiness(civ, cities)` | dict, list | - | 9.0 +/- bonus Monument +/- pop penalty |
+
+**Formule chiave:**
+```
+produzione/turno  = 3 + max(0, population - 1)
+food_threshold    = 10 + population * 3
+scienza/turno     = 2 + (2 se Library) + int(population * 0.5)
+happiness         = 9.0 + (1.0 se Monument) - max(0, (pop-1) * 0.5)
+```
+
+**Nota:** Fa da ponte tra Fase 1 (stub) e Fase 2 (headless). Sostituito da
+`UncivHeadless.advance_turn()` quando si implementa `08_headless_integration.md`.
+
+---
+
+### `src/utils/diagnose_run.py`
+
+```
+diagnose_save_file(save_path)
+    └─► legge current_game_0.json
+        stampa: turno, oro, happiness, pop, edifici, tech
+        warning automatici:
+            turn > 10 e nessun edificio  → produzione rotta
+            turn > 20 e nessuna tech     → scienza rotta
+            happiness < 0               → episodio terminato prematuramente
+            oro invariato a 50          → simulatore oro rotto
+
+simulate_30_turns()
+    └─► crea raw minimale (India, Delhi, pop=1)
+        esegue 30 turni con UncivSimulator
+        stampa tabella: turn | gold | happy | pop | built | techs
+```
+
+**Uso:**
+```
+python src/utils/diagnose_run.py        # analizza saves/current_game_0.json
+python src/utils/diagnose_run.py sim    # simula 30 turni (verifica simulatore)
+``` 
+
+---
+
 ### `src/utils/callbacks.py`
 
 ```
@@ -181,17 +239,20 @@ ActionDistributionCallback
 ```
 load_config(yaml) → dict iperparametri
 
-make_vec_env(make_env, n_envs=4)
+make_vec_env([make_env(rank=i) for i in range(n_envs)], n_envs=4)
     └─► 4 istanze parallele di UncivEnv + Monitor wrapper
+        ogni env usa current_game_{rank}.json separato (no race condition)
+        eval env usa rank=n_envs (es. rank=4)
 
 PPO(
     policy="MlpPolicy",    # rete neurale fully-connected
     learning_rate=3e-4,
-    n_steps=2048,          # step raccolti prima di ogni update
+    n_steps=1024,          # step raccolti prima di ogni update (Fase 1.5)
     batch_size=64,
     n_epochs=10,
     gamma=0.99,
-    clip_range=0.2
+    clip_range=0.2,
+    ent_coef=0.01          # entropia — aumentare a 0.05 se policy collassa
 )
 
 CallbackList([
@@ -256,8 +317,12 @@ salva final_model.zip
 train.py
     ├── src/envs/unciv_env.py
     │       ├── src/parsers/state_parser.py
-    │       └── src/utils/reward.py
+    │       ├── src/utils/reward.py
+    │       └── src/utils/simulator.py
     └── src/utils/callbacks.py
+
+src/utils/diagnose_run.py
+    └── src/utils/simulator.py  (modalità sim)
 
 evaluate.py
     └── src/envs/unciv_env.py
@@ -273,7 +338,11 @@ config/default_config.yaml
 ```
 saves/
     template_game.json      ← read-only, mai modificato
-    current_game.json       ← scritto/letto ad ogni step
+    current_game_0.json     ← Env rank 0 (training)
+    current_game_1.json     ← Env rank 1 (training)
+    current_game_2.json     ← Env rank 2 (training)
+    current_game_3.json     ← Env rank 3 (training)
+    current_game_4.json     ← Eval env (rank = n_envs)
 
 models/checkpoints/
     unciv_ppo_10000_steps.zip
