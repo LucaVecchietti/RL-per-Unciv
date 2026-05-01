@@ -2,7 +2,7 @@ import yaml
 import argparse
 from pathlib import Path
 from stable_baselines3 import PPO
-from stable_baselines3.common.env_util import make_vec_env
+from stable_baselines3.common.vec_env import DummyVecEnv
 from stable_baselines3.common.callbacks import (
     CheckpointCallback,
     EvalCallback,
@@ -48,16 +48,10 @@ def train(config_path: str = "config/default_config.yaml", resume: str = None) -
 
     # Crea ambienti vettorizzati (paralleli) — rank univoco per save file separati
     n_envs = tc["n_envs"]
-    env = make_vec_env(
-        [make_env(config_path, rank=i) for i in range(n_envs)],
-        n_envs=n_envs,
-    )
+    env = DummyVecEnv([make_env(config_path, rank=i) for i in range(n_envs)])
 
     # Eval env usa rank=n_envs per non sovrapporsi ai training env
-    eval_env = make_vec_env(
-        [make_env(config_path, rank=n_envs)],
-        n_envs=1,
-    )
+    eval_env = DummyVecEnv([make_env(config_path, rank=n_envs)])
 
     # Callbacks
     checkpoint_cb = CheckpointCallback(
