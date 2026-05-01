@@ -5,6 +5,63 @@
 
 ---
 
+## [2026-05-01] — Sessione 10
+
+### Obiettivo sessione
+Pianificazione Fase 2.0 e 2.1 + aggiornamento spec file 08-10.
+
+### File modificati
+- `md_file_x_claude_code/08_headless_integration.md` (modificato — scope Fase 2.0, DummyVecEnv, nota env_rank già fatto)
+- `md_file_x_claude_code/09_unit_movement.md` (creato — piano completo Fase 2.1)
+- `md_file_x_claude_code/09_expansion_DEPRECATED.md` (rinominato — vecchio file 09 deprecato)
+- `md_file_x_claude_code/10_obs_space_migration.md` (modificato — shapes (10,), azioni 11, MaskablePPO)
+- `WORK_LOG.md` (questo aggiornamento)
+
+### Fatto
+
+**Discussione architetturale Fase 2:**
+- Problema multi-action: in Unciv per turno ci sono N decisioni indipendenti
+- Soluzione scelta: **per-entity rotation** — sistema cicla entità (città, poi ogni warrior), agente vede una entità alla volta, action space resta `Discrete(K)`
+- Scartato Multi-Discrete: spazio esplode, PPO soffre
+
+**Piano Fase 2.0 (headless integration):**
+- Scope minimo: stessa action space `Discrete(7)`, stessa obs `(7,)` float32
+- Solo `_advance_turn` cambia: `UncivSimulator.advance_turn()` → `UncivHeadless.advance_turn()`
+- Criterio successo: training gira con Unciv reale, ep_rew_mean comparabile a Fase 1.5
+
+**Piano Fase 2.1 (unit movement):**
+- N Warriors illimitati, build-first (agente costruisce Warrior prima di muoverlo)
+- Per-entity rotation: city step → warrior_0 step → warrior_1 step → turno avanza
+- Action space: `Discrete(11)` — 0-6 costruzione/idle, 7-10 movimento N/S/E/W
+- Observation: `(10,)` — aggiunge n_warriors, selected_warrior_x/y, tiles_explored
+- Action masking: `MaskablePPO` da `sb3-contrib` — movimento valido solo se warrior esiste con MP > 0
+- Reward exploration: +0.3 per tile nuova esplorata
+- Movimento: 1 tile/turno, solo Warrior (no Horseman per ora)
+- Criterio successo: ≥1 Warrior entro turno 50, >30% mappa esplorata, sopravvive 200 turni
+
+**Spec file aggiornati:**
+- File 08: scope Fase 2.0 chiarito, DummyVecEnv corretto
+- File 09: riscrittura completa (ex "expansion" → "unit_movement")
+- File 10: shapes aggiornate (12,)→(10,), azioni 9→11, step MaskablePPO aggiunto
+
+**Nota:** durante sessione il training Fase 1.5 ha girato in background — checkpoint fino a 110k step presenti in `models/checkpoints/`.
+
+### Problemi incontrati
+- Nessuno
+
+### Test
+- N/A — sessione di pianificazione e documentazione, nessuna modifica al codice
+
+### TODO prossima sessione
+1. **Controllare risultati training Fase 1.5:** aprire TensorBoard (`tensorboard --logdir logs`), verificare `ep_rew_mean` a 110k step
+2. Se `ep_rew_mean > 0.0` e crescente → continuare training fino a 500k
+3. Se `ep_rew_mean` piatta → `python src/utils/diagnose_run.py sim` per diagnostica
+4. Se `action_Idle > 70%` → aumentare `ent_coef` da 0.01 a 0.05
+5. Quando `ep_rew_mean > 1.0` → salvare `fase1_5_final.zip` e aprire File 08 (headless)
+6. **Prossima fase implementativa:** File 08 (`08_headless_integration.md`) — prerequisito: Java installato e Unciv.jar scaricato
+
+---
+
 ## [2026-05-01] — Sessione 9
 
 ### Obiettivo sessione

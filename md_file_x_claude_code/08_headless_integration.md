@@ -1,8 +1,15 @@
-# 08 — Headless Integration (Fase 2)
+# 08 — Headless Integration (Fase 2.0)
 
 ## Obiettivo
-Sostituire gli stub JSON della Fase 1 con una vera integrazione con Unciv headless.
+Sostituire il micro-simulatore Python (Fase 1.5) con vera integrazione Unciv headless.
 Dopo questa fase, il motore di gioco Unciv gira davvero ad ogni turno.
+
+**Scope Fase 2.0 (minimo):** stessa action space `Discrete(7)`, stessa obs `(7,)`.
+Solo `_advance_turn` cambia: da `UncivSimulator.advance_turn()` a `UncivHeadless.advance_turn()`.
+Validare che il loop funziona con Unciv reale prima di espandere (Fase 2.1).
+
+> **Già implementato da Fase 1.5:** `env_rank` per save file separati, `DummyVecEnv` in `train.py`.
+> Non rifare queste modifiche.
 
 ---
 
@@ -261,12 +268,9 @@ def train(config_path: str = "config/default_config.yaml", resume: str = None) -
     ...
     n_envs = tc["n_envs"]
 
-    # Ogni env ha il suo save file: current_game_0.json, current_game_1.json ...
-    env = make_vec_env(
-        [make_env(config_path, rank=i) for i in range(n_envs)],
-        n_envs=n_envs,
-    )
-    eval_env = make_vec_env([make_env(config_path, rank=n_envs)], n_envs=1)
+    # DummyVecEnv con rank univoco per save file separati (già implementato Fase 1.5)
+    env = DummyVecEnv([make_env(config_path, rank=i) for i in range(n_envs)])
+    eval_env = DummyVecEnv([make_env(config_path, rank=n_envs)])
     ...
 ```
 
