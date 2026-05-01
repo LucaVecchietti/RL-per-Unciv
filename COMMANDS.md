@@ -63,7 +63,7 @@ python evaluate.py --model models/checkpoints/best/best_model.zip --episodes 20
 
 ```powershell
 # Avvia TensorBoard (secondo terminale, durante il training)
-.venv\Scripts\python -m tensorboard --logdir logs\
+tensorboard --logdir logs
 # Poi apri: http://localhost:6006
 
 # Analisi rapida senza TensorBoard (dopo almeno una valutazione)

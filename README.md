@@ -106,7 +106,7 @@ python train.py
 
 ```powershell
 # In un secondo terminale
-.venv\Scripts\python -m tensorboard --logdir logs\
+tensorboard --logdir logs
 # Apri http://localhost:6006
 ```
 
