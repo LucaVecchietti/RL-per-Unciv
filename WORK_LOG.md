@@ -5,6 +5,36 @@
 
 ---
 
+## [2026-05-01] — Sessione 2
+
+### Obiettivo sessione
+Implementare `src/parsers/state_parser.py` e `tests/test_parser.py`.
+
+### File modificati
+- `tests/test_parser.py` (modificato — test reali da stub)
+- `src/parsers/state_parser.py` (modificato — implementazione completa)
+
+### Fatto
+- Scritti test prima dell'implementazione (TDD)
+- Implementati `CityState`, `GameState` dataclass
+- Implementato `UncivStateParser` con: `load()` (JSON + gzip), `parse()`, `to_observation_vector()`
+- Vettore osservazione shape `(7,)` float32 — contratto con `unciv_env.py`
+- Gestito caso `cities = []` (turno 1 senza città)
+
+### Problemi incontrati
+- Nessuno
+
+### Test
+- [x] Tutti i test passano
+- [x] Comando eseguito: `.venv/Scripts/python -m pytest tests/ -v`
+- Output: `3 passed in 2.66s`
+
+### TODO prossima sessione
+1. Implementare `src/envs/unciv_env.py` (spec in `03_gymnasium_env.md`)
+2. Scrivere `tests/test_env.py` prima dell'implementazione
+
+---
+
 ## [2026-05-01] — Sessione 1
 
 ### Obiettivo sessione
