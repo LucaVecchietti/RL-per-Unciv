@@ -30,7 +30,7 @@ def test_step_output_shape(env):
          patch.object(env, '_advance_turn'), \
          patch.object(env.parser, 'parse') as mock_parse:
         from src.parsers.state_parser import GameState, CityState
-        mock_state = GameState(10, "Romans", 200, 5,
+        mock_state = GameState(10, "India", 200, 5,
             [CityState("Rome", 3, "Monument", [], 200, 0)],
             ["Agriculture"], "Writing", 20, 20)
         mock_parse.return_value = mock_state

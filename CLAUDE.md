@@ -48,7 +48,7 @@ unciv-rl-agent/
 |---|---|---|
 | Dimensione observation vector | `(7,)` float32 | `state_parser.py` ↔ `unciv_env.py` |
 | Numero azioni | `7` (Discrete) | `unciv_env.py` ↔ `train.py` |
-| Nome civilizzazione default | `"Romans"` | `state_parser.py`, `unciv_env.py` |
+| Nome civilizzazione default | `"India"` | `state_parser.py`, `unciv_env.py` |
 | Save file corrente | `saves/current_game.json` | `unciv_env.py` |
 
 > ⚠️ Se modifichi uno di questi valori, aggiorna **tutti** i file coinvolti e la tabella qui sopra.

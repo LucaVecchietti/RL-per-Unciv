@@ -13,7 +13,7 @@ def make_state(
 ) -> GameState:
     return GameState(
         turn=turn,
-        current_player="Romans",
+        current_player="India",
         gold=gold,
         happiness=happiness,
         cities=[CityState("Rome", population, "Monument", buildings or [], 200, 0)],

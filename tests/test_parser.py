@@ -7,9 +7,9 @@ from src.parsers.state_parser import UncivStateParser
 # Stato minimale di test
 MOCK_SAVE = {
     "turns": 10,
-    "currentPlayer": "Romans",
+    "currentPlayer": "India",
     "civilizations": [{
-        "civName": "Romans",
+        "civName": "India",
         "gold": 200,
         "happiness": 5,
         "cities": [{
@@ -31,7 +31,7 @@ MOCK_SAVE = {
 }
 
 def test_parse_basic():
-    parser = UncivStateParser(player_civ="Romans")
+    parser = UncivStateParser(player_civ="India")
     with tempfile.NamedTemporaryFile(suffix=".json", mode='w', delete=False) as f:
         json.dump(MOCK_SAVE, f)
         tmp_path = f.name
@@ -48,7 +48,7 @@ def test_observation_vector_shape():
     # Test diretto su to_observation_vector
     from src.parsers.state_parser import GameState, CityState
     mock_state = GameState(
-        turn=10, current_player="Romans", gold=200, happiness=5,
+        turn=10, current_player="India", gold=200, happiness=5,
         cities=[CityState("Rome", 3, "Monument", ["Granary"], 200, 0)],
         techs_researched=["Agriculture"], current_tech="Writing",
         map_width=20, map_height=20

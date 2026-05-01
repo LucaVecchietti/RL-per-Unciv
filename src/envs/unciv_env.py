@@ -33,7 +33,7 @@ class UncivEnv(gym.Env):
         super().__init__()
         self.render_mode = render_mode
         self.config = self._load_config(config_path)
-        self.parser = UncivStateParser(player_civ="Romans")
+        self.parser = UncivStateParser(player_civ="India")
         self.save_path = Path(self.config["paths"]["unciv_saves"]) / "current_game.json"
         self.max_turns = self.config["environment"]["max_turns"]
 
@@ -143,7 +143,7 @@ class UncivEnv(gym.Env):
 
         # Modifica currentConstruction nella prima città del giocatore
         for civ in raw.get("civilizations", []):
-            if civ.get("civName") == "Romans":
+            if civ.get("civName") == "India":
                 if civ.get("cities"):
                     civ["cities"][0]["cityConstructions"]["currentConstruction"] = construction
                 break

@@ -40,7 +40,7 @@ class UncivStateParser:
     e lo converte in strutture dati Python usabili dall'ambiente RL.
     """
 
-    def __init__(self, player_civ: str = "Romans") -> None:
+    def __init__(self, player_civ: str = "India") -> None:
         self.player_civ = player_civ
 
     def load(self, path: str | Path) -> dict:
