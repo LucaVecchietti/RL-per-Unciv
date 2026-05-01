@@ -131,3 +131,12 @@ unciv-rl-agent/
 1. Esegui `python -m pytest tests/ -v` e mostra output
 2. Aggiorna `WORK_LOG.md`
 3. Elenca esplicitamente i TODO per la prossima sessione
+
+## Convenzione commit
+Usa sempre il formato Conventional Commits:
+- feat: nuova funzionalità
+- fix: correzione bug
+- docs: solo documentazione
+- refactor: refactoring senza nuove feature
+- test: aggiunta o modifica test
+- chore: setup, config, dipendenze

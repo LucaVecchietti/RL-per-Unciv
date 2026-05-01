@@ -1,0 +1,19 @@
+training:
+  total_timesteps: 1_000_000
+  n_envs: 4                  # Ambienti paralleli
+  learning_rate: 0.0003
+  n_steps: 2048              # Passi per update PPO
+  batch_size: 64
+  n_epochs: 10
+  gamma: 0.99                # Discount factor
+  clip_range: 0.2
+
+environment:
+  max_turns: 200             # Turni massimi per episodio (Fase 1)
+  map_size: "tiny"           # tiny | small | standard
+  victory_type: "science"    # Obiettivo iniziale semplificato
+
+paths:
+  save_dir: "models/checkpoints"
+  log_dir: "logs"
+  unciv_saves: "saves"
