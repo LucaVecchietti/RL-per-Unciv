@@ -8,6 +8,7 @@ import shutil
 
 from src.parsers.state_parser import UncivStateParser, GameState
 from src.utils.reward import compute_reward, compute_terminal_reward
+from src.utils.simulator import UncivSimulator
 
 # Mappa azione → nome costruzione Unciv
 ACTION_MAP = {
@@ -29,12 +30,19 @@ class UncivEnv(gym.Env):
 
     metadata = {"render_modes": ["human", "rgb_array"]}
 
-    def __init__(self, config_path: str = "config/default_config.yaml", render_mode: Optional[str] = None) -> None:
+    def __init__(
+        self,
+        config_path: str = "config/default_config.yaml",
+        env_rank: int = 0,
+        render_mode: Optional[str] = None,
+    ) -> None:
         super().__init__()
         self.render_mode = render_mode
         self.config = self._load_config(config_path)
         self.parser = UncivStateParser(player_civ="India")
-        self.save_path = Path(self.config["paths"]["unciv_saves"]) / "current_game.json"
+        self.simulator = UncivSimulator()
+        self.env_rank = env_rank
+        self.save_path = Path(self.config["paths"]["unciv_saves"]) / f"current_game_{env_rank}.json"
         self.max_turns = self.config["environment"]["max_turns"]
 
         # Spazi standard Gymnasium
@@ -153,13 +161,12 @@ class UncivEnv(gym.Env):
 
     def _advance_turn(self) -> None:
         """
-        STUB — avanza il turno.
-        Fase 1: modifica manuale del counter turni nel JSON.
-        Fase 2+: chiama Unciv headless via subprocess.
+        Fase 1.5: micro-simulatore Python.
+        Fase 2 (file 08): sostituire con self.headless.advance_turn(self.save_path).
         """
         with open(self.save_path, 'r') as f:
             raw = json.load(f)
-        raw["turns"] = raw.get("turns", 0) + 1
+        raw = self.simulator.advance_turn(raw)
         with open(self.save_path, 'w') as f:
             json.dump(raw, f)
 

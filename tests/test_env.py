@@ -16,12 +16,36 @@ def env(tmp_path):
     config_path = tmp_path / "config.yaml"
     with open(config_path, 'w') as f:
         yaml.dump(config, f)
-    return UncivEnv(config_path=str(config_path))
+    return UncivEnv(config_path=str(config_path), env_rank=0)
 
 
 def test_spaces(env):
     assert env.observation_space.shape == (7,)
     assert env.action_space.n == 7
+
+
+def test_env_rank_uses_separate_save_files(tmp_path):
+    """Due env con rank diversi devono usare save file separati."""
+    import yaml
+    config = {
+        "training": {"total_timesteps": 1000},
+        "environment": {"max_turns": 50, "map_size": "tiny", "victory_type": "science"},
+        "paths": {
+            "save_dir": str(tmp_path / "models"),
+            "log_dir": str(tmp_path / "logs"),
+            "unciv_saves": str(tmp_path / "saves"),
+        },
+    }
+    config_path = tmp_path / "config.yaml"
+    with open(config_path, 'w') as f:
+        yaml.dump(config, f)
+
+    env0 = UncivEnv(config_path=str(config_path), env_rank=0)
+    env1 = UncivEnv(config_path=str(config_path), env_rank=1)
+
+    assert env0.save_path != env1.save_path
+    assert "current_game_0" in str(env0.save_path)
+    assert "current_game_1" in str(env1.save_path)
 
 
 def test_step_output_shape(env):

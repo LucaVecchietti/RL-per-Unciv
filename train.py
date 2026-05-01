@@ -19,10 +19,13 @@ def load_config(path: str) -> dict:
         return yaml.safe_load(f)
 
 
-def make_env(config_path: str):
-    """Factory function per make_vec_env."""
+def make_env(config_path: str, rank: int = 0):
+    """
+    Factory function per make_vec_env.
+    Ogni env riceve rank univoco → save file separato → no race condition.
+    """
     def _init():
-        env = UncivEnv(config_path=config_path)
+        env = UncivEnv(config_path=config_path, env_rank=rank)
         return Monitor(env)
     return _init
 
@@ -43,14 +46,18 @@ def train(config_path: str = "config/default_config.yaml", resume: str = None) -
     Path(paths["save_dir"]).mkdir(parents=True, exist_ok=True)
     Path(paths["log_dir"]).mkdir(parents=True, exist_ok=True)
 
-    # Crea ambienti vettorizzati (paralleli)
+    # Crea ambienti vettorizzati (paralleli) — rank univoco per save file separati
+    n_envs = tc["n_envs"]
     env = make_vec_env(
-        make_env(config_path),
-        n_envs=tc["n_envs"],
+        [make_env(config_path, rank=i) for i in range(n_envs)],
+        n_envs=n_envs,
     )
 
-    # Ambiente di valutazione separato (non usato nel training)
-    eval_env = make_vec_env(make_env(config_path), n_envs=1)
+    # Eval env usa rank=n_envs per non sovrapporsi ai training env
+    eval_env = make_vec_env(
+        [make_env(config_path, rank=n_envs)],
+        n_envs=1,
+    )
 
     # Callbacks
     checkpoint_cb = CheckpointCallback(

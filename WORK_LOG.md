@@ -5,6 +5,44 @@
 
 ---
 
+## [2026-05-01] — Sessione 8
+
+### Obiettivo sessione
+Implementare Fase 1.5: micro-simulatore Python (File 11) + fix race condition env_rank (File 12).
+
+### File modificati
+- `src/utils/simulator.py` (creato — UncivSimulator: produzione, popolazione, scienza, oro, happiness)
+- `tests/test_simulator.py` (creato — 14 test TDD)
+- `src/envs/unciv_env.py` (modificato — import UncivSimulator, self.simulator, _advance_turn reale, env_rank)
+- `train.py` (modificato — make_env con rank, env/eval_env con save file separati)
+- `tests/test_env.py` (modificato — fixture env_rank=0 esplicito + test race condition)
+- `CLAUDE.md` (modificato — Fase 1.5 completata, struttura utils, contratti aggiornati)
+- `WORK_LOG.md` (questo aggiornamento)
+
+### Fatto
+- Implementato `UncivSimulator` con formule Unciv: produzione (3+pop-1 prod/turn), crescita popolazione (food threshold), scienza (Library bonus), oro (1/città/turn), happiness (9.0 base + Monument - pop penalty)
+- Fix race condition: ogni env ora usa `current_game_{rank}.json` separato
+- `train.py`: eval env usa `rank=n_envs` (es. rank=4 per n_envs=4)
+- 14 nuovi test simulatore + 1 test race condition — tutti passano
+- Suite totale: **44 test passati**
+
+### Problemi incontrati
+- Nessuno — spec File 11 e 12 corrette e coerenti con codebase esistente
+
+### Test
+- [x] Tutti i test passano
+- [x] Comando eseguito: `.venv/Scripts/python -m pytest tests/ -v`
+- Output: `44 passed in 4.13s`
+
+### TODO prossima sessione
+1. Creare `src/utils/diagnose_run.py` (File 13) — diagnostica save file e simulazione 30 turni
+2. Rilanciare training con simulatore: `python train.py` — interrompere run precedente
+3. Monitorare `ep_rew_mean` — deve superare 0.0 entro 100k step, 2.0 entro 500k
+4. Se reward piatta dopo 200k step → `python src/utils/diagnose_run.py sim`
+5. Quando `ep_rew_mean > 1.0` → salvare `fase1_5_final.zip` e aprire File 08
+
+---
+
 ## [2026-05-01] — Sessione 7
 
 ### Obiettivo sessione

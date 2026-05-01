@@ -22,7 +22,9 @@ unciv-rl-agent/
 │   └── utils/
 │       ├── reward.py            # Reward function (pura, no side effects)
 │       ├── callbacks.py         # Callback TensorBoard custom
-│       └── analyze_run.py       # Analisi run senza TensorBoard
+│       ├── analyze_run.py       # Analisi run senza TensorBoard
+│       ├── simulator.py         # Micro-simulatore turno Unciv (Fase 1.5)
+│       └── diagnose_run.py      # Diagnostica training e save file
 ├── config/default_config.yaml
 ├── models/checkpoints/          # Ignorato da git
 ├── logs/                        # Ignorato da git
@@ -49,15 +51,26 @@ unciv-rl-agent/
 | Dimensione observation vector | `(7,)` float32 | `state_parser.py` ↔ `unciv_env.py` |
 | Numero azioni | `7` (Discrete) | `unciv_env.py` ↔ `train.py` |
 | Nome civilizzazione default | `"India"` | `state_parser.py`, `unciv_env.py` |
-| Save file corrente | `saves/current_game.json` | `unciv_env.py` |
+| Save file per env | `saves/current_game_{rank}.json` | `unciv_env.py` ↔ `train.py` |
+| Simulatore attivo | `UncivSimulator` in `_advance_turn` | `simulator.py` ↔ `unciv_env.py` |
 
 > ⚠️ Se modifichi uno di questi valori, aggiorna **tutti** i file coinvolti e la tabella qui sopra.
 
 ## Fasi di sviluppo
 - [x] **Fase 1** — Gestione singola città (produzione, tech, oro, happiness)
-- [ ] **Fase 2** — Espansione (settler, esplorazione mappa)
+- [x] **Fase 1.5** — Micro-simulatore Python (reward reali, training rapido)
+- [ ] **Fase 2** — Unciv Headless + espansione (File 08-10)
 - [ ] **Fase 3** — Combattimento (unità militari)
 - [ ] **Fase 4** — Diplomazia + vittoria completa
+
+## Stato training corrente
+
+| Run | Timesteps | ep_rew_mean | Note |
+|---|---|---|---|
+| Fase 1 (stub JSON) | ~16k | ~-1.1 | Nessun segnale reale |
+| Fase 1.5 (simulatore) | in corso | TBD | Reward da simulazione Python |
+
+> Aggiornare dopo ogni run significativo.
 
 ## Metodo di lavoro — Seguire sempre questo flusso
 
