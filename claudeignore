@@ -1,0 +1,65 @@
+# .claudeignore
+# File e cartelle che Claude Code NON deve leggere.
+# Stessa sintassi di .gitignore.
+
+# --------------------------
+# Artifacts di training ML
+# (pesanti, cambiano spesso, irrilevanti per il codice)
+# --------------------------
+models/
+logs/
+runs/
+tensorboard_logs/
+
+# --------------------------
+# Dati e save files Unciv
+# (JSON pesanti, non sono codice)
+# --------------------------
+saves/
+game_states/
+data/
+
+# --------------------------
+# Binari e file compressi
+# --------------------------
+*.zip
+*.pkl
+*.npz
+*.npy
+*.pt
+*.pth
+
+# --------------------------
+# Ambiente virtuale Python
+# (migliaia di file, mai rilevanti)
+# --------------------------
+.venv/
+venv/
+env/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+
+# --------------------------
+# Cache strumenti
+# --------------------------
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+
+# --------------------------
+# OS e IDE
+# --------------------------
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# --------------------------
+# File di log
+# --------------------------
+*.log
+pip-log.txt
