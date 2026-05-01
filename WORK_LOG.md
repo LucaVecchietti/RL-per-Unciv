@@ -32,6 +32,9 @@ Diagnostica training (File 13) + aggiornamento docs (File 14).
 - [x] Comando eseguito: `.venv/Scripts/python -m pytest tests/ -v`
 - Output: `44 passed in 2.62s`
 
+### Fix post-sessione
+- `train.py`: `make_vec_env(lista, n_envs)` → `DummyVecEnv(lista)` — SB3 non accetta lista di callable come `env_id` in `make_vec_env`. Fix: import `DummyVecEnv` e uso diretto. Commit `75c3519`.
+
 ### TODO prossima sessione
 1. **Rilanciare training:** `python train.py` (interrompere run precedente se attivo)
 2. Monitorare con TensorBoard: `tensorboard --logdir logs`
