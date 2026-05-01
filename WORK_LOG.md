@@ -5,6 +5,44 @@
 
 ---
 
+## [2026-05-01] — Sessione 9
+
+### Obiettivo sessione
+Diagnostica training (File 13) + aggiornamento docs (File 14).
+
+### File modificati
+- `src/utils/diagnose_run.py` (creato — diagnosi save file + simulazione 30 turni)
+- `config/default_config.yaml` (modificato — ent_coef 0.01, n_steps 1024, max_turns 150, total_timesteps 500k)
+- `train.py` (modificato — ent_coef letto da config, passato a PPO)
+- `COMMANDS.md` (modificato — sezione Diagnostica con comandi diagnose_run.py)
+- `WORK_LOG.md` (questo aggiornamento)
+
+### Fatto
+- Creato `diagnose_run.py` con due modalità: analisi save file reale (warning automatici) e simulazione 30 turni manuale
+- Fix import per esecuzione come script (`sys.path.insert` con path root progetto)
+- Simulazione 30 turni verificata: Monument completa turno 17, pop cresce, tech avanza — simulatore corretto
+- Config Fase 1.5 applicata: n_steps 2048→1024, max_turns 200→150, total_timesteps 1M→500k, ent_coef 0.01 aggiunto
+- `train.py` legge `ent_coef` con `tc.get("ent_coef", 0.0)` — backward compatible
+
+### Problemi incontrati
+- `python src/utils/diagnose_run.py sim` → `ModuleNotFoundError: No module named 'src'` — fix: aggiunto `sys.path.insert(0, ...)` in cima al file
+
+### Test
+- [x] Tutti i test passano
+- [x] Comando eseguito: `.venv/Scripts/python -m pytest tests/ -v`
+- Output: `44 passed in 2.62s`
+
+### TODO prossima sessione
+1. **Rilanciare training:** `python train.py` (interrompere run precedente se attivo)
+2. Monitorare con TensorBoard: `tensorboard --logdir logs`
+3. Target 100k step: `ep_rew_mean > 0.0`
+4. Target 500k step: `ep_rew_mean > 2.0`
+5. Se reward piatta dopo 200k → `python src/utils/diagnose_run.py sim`
+6. Se action_Idle > 70% → aumentare `ent_coef` da 0.01 a 0.05 in config
+7. Quando `ep_rew_mean > 1.0` → salvare `fase1_5_final.zip` e aprire File 08
+
+---
+
 ## [2026-05-01] — Sessione 8
 
 ### Obiettivo sessione

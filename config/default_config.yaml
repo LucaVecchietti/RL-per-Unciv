@@ -1,15 +1,16 @@
 training:
-  total_timesteps: 1_000_000
+  total_timesteps: 500_000
   n_envs: 4                  # Ambienti paralleli
   learning_rate: 0.0003
-  n_steps: 2048              # Passi per update PPO
+  n_steps: 1024              # Passi per update PPO (ridotto per Fase 1.5)
   batch_size: 64
   n_epochs: 10
   gamma: 0.99                # Discount factor
   clip_range: 0.2
+  ent_coef: 0.01             # Entropia — aumentare a 0.05 se policy collassa
 
 environment:
-  max_turns: 200             # Turni massimi per episodio (Fase 1)
+  max_turns: 150             # Turni massimi per episodio (Fase 1.5)
   map_size: "tiny"           # tiny | small | standard
   victory_type: "science"    # Obiettivo iniziale semplificato
 

@@ -72,6 +72,31 @@ python src/utils/analyze_run.py
 
 ---
 
+## Diagnostica
+
+```powershell
+# Analisi stato save file corrente (segnala anomalie simulatore)
+.venv\Scripts\python src/utils/diagnose_run.py
+
+# Analisi save file specifico
+.venv\Scripts\python src/utils/diagnose_run.py saves/current_game_0.json
+
+# Simulazione manuale 30 turni (verifica che simulatore produca reward reali)
+.venv\Scripts\python src/utils/diagnose_run.py sim
+```
+
+Output atteso `sim`:
+```
+ Turn |   Gold |  Happy |  Pop | Built                     | Techs
+...
+   17 |   67.0 |    9.0 |    3 | ['Monument']              | ['Agriculture', 'Pottery']
+```
+
+Se `Built` rimane `[]` dopo turno 20 → simulatore produzione rotto.
+Se `Happy` scende sotto 0 → agente non gestisce città.
+
+---
+
 ## Test
 
 ```powershell

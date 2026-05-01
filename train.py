@@ -97,6 +97,7 @@ def train(config_path: str = "config/default_config.yaml", resume: str = None) -
             n_epochs=tc["n_epochs"],
             gamma=tc["gamma"],
             clip_range=tc["clip_range"],
+            ent_coef=tc.get("ent_coef", 0.0),
             verbose=1,
             tensorboard_log=paths["log_dir"],
         )
