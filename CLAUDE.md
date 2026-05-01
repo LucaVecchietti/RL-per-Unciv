@@ -131,6 +131,7 @@ unciv-rl-agent/
 1. Esegui `python -m pytest tests/ -v` e mostra output
 2. Aggiorna `WORK_LOG.md`
 3. Elenca esplicitamente i TODO per la prossima sessione
+4. Fai git add, commit, push delle modifiche.
 
 ## Convenzione commit
 Usa sempre il formato Conventional Commits:

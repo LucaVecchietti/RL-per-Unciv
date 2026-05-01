@@ -5,6 +5,37 @@
 
 ---
 
+## [2026-05-01] — Sessione 3
+
+### Obiettivo sessione
+Implementare `src/envs/unciv_env.py` e `tests/test_env.py`.
+
+### File modificati
+- `tests/test_env.py` (modificato — test reali da stub)
+- `src/envs/unciv_env.py` (modificato — implementazione completa)
+
+### Fatto
+- Scritti test prima dell'implementazione (TDD)
+- Implementato `UncivEnv(gym.Env)` con: `reset()`, `step()`, `render()`, `close()`
+- `observation_space`: Box `(7,)` float32 — contratto rispettato con `state_parser.py`
+- `action_space`: Discrete(7) — mappa `ACTION_MAP` 0-6
+- Stub espliciti per `_start_new_game`, `_apply_action`, `_advance_turn`, `_compute_reward`
+- `_is_terminated()` termina se `happiness < -10`
+
+### Problemi incontrati
+- Nessuno
+
+### Test
+- [x] Tutti i test passano
+- [x] Comando eseguito: `.venv/Scripts/python -m pytest tests/ -v`
+- Output: `5 passed in 2.45s`
+
+### TODO prossima sessione
+1. Implementare `src/utils/reward.py` (spec in `04_reward_function.md`)
+2. Collegare `_compute_reward` in `unciv_env.py` al modulo reward
+
+---
+
 ## [2026-05-01] — Sessione 2
 
 ### Obiettivo sessione
