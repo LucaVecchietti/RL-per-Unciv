@@ -5,6 +5,55 @@
 
 ---
 
+## [2026-05-01] — Sessione 7
+
+### Obiettivo sessione
+Verifica save file Unciv, primo training reale, fix documentazione.
+
+### File modificati
+- `CLAUDE.md` (modificato — civilizzazione Romans → India nella tabella contratti)
+- `src/parsers/state_parser.py` (modificato — default player_civ Romans → India)
+- `src/envs/unciv_env.py` (modificato — Romans → India in 2 punti)
+- `tests/test_parser.py` (modificato — Romans → India ovunque)
+- `tests/test_env.py` (modificato — Romans → India)
+- `tests/test_reward.py` (modificato — Romans → India)
+- `COMMANDS.md` (creato — riferimento completo tutti i comandi)
+- `README.md` (modificato — descrizione completa per repo GitHub)
+- `_verify.py` (creato — script verifica save file, non in git)
+
+### Fatto
+- Rinominata civilizzazione da `"Romans"` a `"India"` in tutti i file .py (9 occorrenze) e CLAUDE.md — 29 test passano ancora
+- Creato `saves/template_game.json` manualmente via Unciv (partita India, Tiny, Chieftain, 0 AI, 2 turni)
+- Verificato save file valido con `_verify.py` — obs vector `shape=(7,)` corretto
+- Avviato primo training reale `python train.py` — nessun errore
+- Avviato TensorBoard con `tensorboard --logdir logs` — metriche custom `unciv/` visibili
+- Fix comando TensorBoard in COMMANDS.md e README.md (`tensorboard --logdir logs`, non `python -m tensorboard`)
+
+### Problemi incontrati
+- `python -m tensorboard` non funziona → usare `tensorboard --logdir logs` direttamente
+- PowerShell heredoc (`<< 'EOF'`) non supportato → usato `-c` su singola riga o file `_verify.py`
+
+### Test
+- [x] Tutti i test passano
+- [x] Comando eseguito: `.venv/Scripts/python -m pytest tests/ -v`
+- Output: `29 passed in 2.74s`
+
+### Stato training al momento della chiusura sessione
+```
+iterations: 2 | total_timesteps: 16384 | fps: ~38
+ep_rew_mean: -1.11 (normale, agente esplora casualmente)
+action_*: distribuzione uniforme ~14% ciascuna (esplorazione)
+happiness_mean: 0, gold_mean: 3
+```
+
+### TODO prossima sessione
+1. Controllare `ep_rew_mean` — deve salire verso valori positivi
+2. Se reward piatta dopo 200k+ step → analizzare con `python src/utils/analyze_run.py`
+3. Se agente converge su azione singola → aumentare `ent_coef` in config
+4. Eventuale Fase 2: espansione con Settler e gestione save files paralleli (`env_rank`)
+
+---
+
 ## [2026-05-01] — Sessione 6
 
 ### Obiettivo sessione
