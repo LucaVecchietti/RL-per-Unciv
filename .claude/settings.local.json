@@ -10,7 +10,8 @@
       "Bash(git push *)",
       "Bash(.venv/Scripts/python -m pytest tests/test_parser.py -v)",
       "Bash(.venv/Scripts/python -m pytest tests/test_env.py -v)",
-      "Bash(.venv/Scripts/python -m pytest tests/test_reward.py -v)"
+      "Bash(.venv/Scripts/python -m pytest tests/test_reward.py -v)",
+      "Bash(.venv/Scripts/python -m pytest tests/test_training.py -v)"
     ]
   }
 }

@@ -5,6 +5,38 @@
 
 ---
 
+## [2026-05-01] — Sessione 5
+
+### Obiettivo sessione
+Implementare `train.py` ed `evaluate.py` seguendo `05_ppo_training.md`.
+
+### File modificati
+- `tests/test_training.py` (creato — 4 test)
+- `train.py` (modificato — implementazione completa)
+- `evaluate.py` (creato — script valutazione)
+- `src/agents/ppo_agent.py` (invariato — spec non definisce contenuto)
+
+### Fatto
+- Implementato `train()`: PPO con make_vec_env, CheckpointCallback, EvalCallback, resume da checkpoint
+- Implementato `make_env()`: factory con Monitor wrapper (obbligatorio per EvalCallback)
+- Implementato `load_config()`: lettura YAML
+- Creato `evaluate.py`: valutazione N episodi con modello caricato
+- Test: import check + `load_config` + `make_env` callable
+
+### Problemi incontrati
+- Nessuno
+
+### Test
+- [x] Tutti i test passano
+- [x] Comando eseguito: `.venv/Scripts/python -m pytest tests/ -v`
+- Output: `19 passed in 2.58s`
+
+### TODO prossima sessione
+1. Implementare monitoring TensorBoard (spec in `06_monitoring.md`)
+2. Setup Unciv headless (spec in `07_unciv_setup.md`)
+
+---
+
 ## [2026-05-01] — Sessione 4
 
 ### Obiettivo sessione
