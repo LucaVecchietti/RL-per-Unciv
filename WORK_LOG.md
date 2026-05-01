@@ -5,6 +5,37 @@
 
 ---
 
+## [2026-05-01] — Sessione 4
+
+### Obiettivo sessione
+Implementare `src/utils/reward.py` e collegarlo a `unciv_env.py`.
+
+### File modificati
+- `tests/test_reward.py` (creato — 10 test)
+- `src/utils/reward.py` (modificato — implementazione completa)
+- `src/utils/reward_logger.py` (creato — verbose breakdown, richiesto da spec)
+- `src/envs/unciv_env.py` (modificato — integrazione reward + terminal reward)
+
+### Fatto
+- Scritti 10 test prima dell'implementazione (TDD)
+- Implementato `compute_reward` (pura, no side effects): 6 componenti (pop, edifici, tech, oro, happiness, idle)
+- Implementato `compute_terminal_reward`: survival_bonus + progress_bonus
+- Implementato `compute_reward_verbose` in `reward_logger.py` con breakdown per componente
+- `unciv_env.py`: sostituito stub → `compute_reward`; aggiunto `compute_terminal_reward` su `terminated=True` (non su `truncated`)
+
+### Problemi incontrati
+- Nessuno
+
+### Test
+- [x] Tutti i test passano
+- [x] Comando eseguito: `.venv/Scripts/python -m pytest tests/ -v`
+- Output: `15 passed in 2.50s`
+
+### TODO prossima sessione
+1. Implementare `src/agents/ppo_agent.py` e `train.py` (spec in `05_ppo_training.md`)
+
+---
+
 ## [2026-05-01] — Sessione 3
 
 ### Obiettivo sessione

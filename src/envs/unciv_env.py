@@ -7,6 +7,7 @@ import json
 import shutil
 
 from src.parsers.state_parser import UncivStateParser, GameState
+from src.utils.reward import compute_reward, compute_terminal_reward
 
 # Mappa azione → nome costruzione Unciv
 ACTION_MAP = {
@@ -77,12 +78,15 @@ class UncivEnv(gym.Env):
         self._current_state = self.parser.parse(self.save_path)
         obs = self.parser.to_observation_vector(self._current_state)
 
-        # 4. Calcola reward (vedi file 04)
+        # 4. Calcola reward
         reward = self._compute_reward(self._prev_state, self._current_state, action)
 
         # 5. Controlla terminazione
         terminated = self._is_terminated()
         truncated = self._episode_steps >= self.max_turns
+
+        if terminated:
+            reward += compute_terminal_reward(self._current_state, self.max_turns)
 
         info = {
             "turn": self._current_state.turn,
@@ -160,8 +164,8 @@ class UncivEnv(gym.Env):
             json.dump(raw, f)
 
     def _compute_reward(self, prev: Optional[GameState], curr: GameState, action: int) -> float:
-        """Delega al modulo reward (file 04). STUB qui."""
-        return 0.0  # Sostituire con import da src/utils/reward.py
+        """Delega a src/utils/reward.compute_reward."""
+        return compute_reward(prev, curr, action)
 
     def _is_terminated(self) -> bool:
         """L'episodio termina se happiness scende sotto soglia critica."""
