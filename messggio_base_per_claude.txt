@@ -1,0 +1,11 @@
+Leggi attentamente CLAUDE.md e WORK_LOG.md prima di fare qualsiasi cosa.
+
+Poi scrivi un riepilogo in questo formato esatto:
+
+Stato attuale: [cosa è già implementato secondo WORK_LOG.md]
+Obiettivo sessione: [primo TODO della lista]
+File che toccherò: [lista esplicita dei file]
+
+Aspetta la mia conferma prima di scrivere qualsiasi riga di codice.
+
+Quando sarà il momento di implementare, lavora seguendo il file 06_monitoring.md e 07_unciv_setup.md.

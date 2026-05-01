@@ -1,0 +1,4519 @@
+{
+    "version": {
+        "number": 4,
+        "createdWith": {
+            "text": "4.20.3",
+            "number": 1214
+        }
+    },
+    "civilizations": [
+        {
+            "civName": "Barbarians",
+            "civID": "Barbarians",
+            "tech": {
+                "techsResearched": [
+                    "Agriculture"
+                ]
+            },
+            "policies": {},
+            "civConstructions": {},
+            "questManager": {},
+            "religionManager": {},
+            "goldenAges": {
+                "storedHappiness": 12
+            },
+            "greatPeople": {
+                "pointsForNextGreatGeneralCounter": {
+                    "Great General": 200
+                }
+            },
+            "espionageManager": {},
+            "victoryManager": {},
+            "ruinsManager": {},
+            "exploredRegion": {}
+        },
+        {
+            "playerType": "Human",
+            "gold": 3,
+            "civName": "India",
+            "civID": "India",
+            "tech": {
+                "scienceOfLast8Turns": [
+                    4,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                ],
+                "techsResearched": [
+                    "Agriculture"
+                ],
+                "techsToResearch": [
+                    "Pottery"
+                ],
+                "techsInProgress": {
+                    "Pottery": 4
+                }
+            },
+            "policies": {
+                "storedCulture": 1,
+                "cultureOfLast8Turns": [
+                    1,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                ],
+                "shouldOpenPolicyPicker": true
+            },
+            "civConstructions": {},
+            "questManager": {},
+            "religionManager": {},
+            "goldenAges": {
+                "storedHappiness": 8
+            },
+            "greatPeople": {
+                "pointsForNextGreatGeneralCounter": {
+                    "Great General": 200
+                }
+            },
+            "espionageManager": {},
+            "victoryManager": {},
+            "ruinsManager": {},
+            "proximity": {
+                "Belgrade": "None",
+                "Genoa": "Close",
+                "Vatican City": "None",
+                "La Venta": "Close",
+                "Kathmandu": "Neighbors",
+                "Ragusa": "Close"
+            },
+            "notificationCountAtStartTurn": 0,
+            "cities": [
+                {
+                    "location": {
+                        "x": 3,
+                        "y": 6
+                    },
+                    "id": "f3ab5862-2440-4bb3-899b-4f9409c975eb",
+                    "name": "Delhi",
+                    "foundingCiv": "India",
+                    "population": {
+                        "foodStored": 2
+                    },
+                    "cityConstructions": {
+                        "builtBuildings": [
+                            "Palace"
+                        ],
+                        "inProgressConstructions": {
+                            "Worker": 5
+                        },
+                        "currentConstructionIsUserSet": true,
+                        "constructionQueue": [
+                            "Worker"
+                        ]
+                    },
+                    "expansion": {
+                        "cultureStored": 1
+                    },
+                    "religion": {},
+                    "espionage": {},
+                    "tiles": [
+                        {
+                            "x": 3,
+                            "y": 5
+                        },
+                        {
+                            "x": 4,
+                            "y": 6
+                        },
+                        {
+                            "x": 3,
+                            "y": 6
+                        },
+                        {
+                            "x": 2,
+                            "y": 5
+                        },
+                        {
+                            "x": 4,
+                            "y": 7
+                        },
+                        {
+                            "x": 3,
+                            "y": 7
+                        },
+                        {
+                            "x": 2,
+                            "y": 6
+                        }
+                    ],
+                    "workedTiles": [
+                        {
+                            "x": 3,
+                            "y": 7
+                        }
+                    ],
+                    "isOriginalCapital": true,
+                    "flagsCountdown": {
+                        "ResourceDemand": 18
+                    },
+                    "connectedToCapitalStatus": true
+                }
+            ],
+            "citiesCreated": 1,
+            "exploredRegion": {
+                "topLeft": {
+                    "y": 18
+                },
+                "bottomRight": {
+                    "x": -6,
+                    "y": 5
+                }
+            },
+            "lastSeenImprovement": {
+                "(8,8)": "Barbarian encampment",
+                "(3,6)": "City center"
+            },
+            "hasEverOwnedOriginalCapital": true,
+            "totalCultureForContests": 1,
+            "hasMovedAutomatedUnits": true,
+            "statsHistory": {
+                "1": "S44N1C2P5G3T7F28H8W1A0"
+            }
+        },
+        {
+            "civName": "Vatican City",
+            "civID": "Vatican City",
+            "tech": {
+                "techsResearched": [
+                    "Agriculture"
+                ],
+                "techsToResearch": [
+                    "Animal Husbandry"
+                ]
+            },
+            "policies": {},
+            "civConstructions": {},
+            "questManager": {},
+            "religionManager": {},
+            "goldenAges": {
+                "storedHappiness": 12
+            },
+            "greatPeople": {
+                "pointsForNextGreatGeneralCounter": {
+                    "Great General": 200
+                }
+            },
+            "espionageManager": {},
+            "victoryManager": {},
+            "ruinsManager": {},
+            "proximity": {
+                "Genoa": "None",
+                "La Venta": "None",
+                "Kathmandu": "None",
+                "India": "None",
+                "Ragusa": "None"
+            },
+            "flagsCountdown": {
+                "TurnsTillCityStateElection": 14
+            },
+            "exploredRegion": {},
+            "cityStatePersonality": "Friendly"
+        },
+        {
+            "gold": 6,
+            "civName": "Genoa",
+            "civID": "Genoa",
+            "tech": {
+                "scienceOfLast8Turns": [
+                    4,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                ],
+                "techsResearched": [
+                    "Agriculture"
+                ],
+                "techsToResearch": [
+                    "Mining"
+                ],
+                "techsInProgress": {
+                    "Mining": 4
+                }
+            },
+            "policies": {
+                "storedCulture": 1,
+                "cultureOfLast8Turns": [
+                    1,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                ],
+                "shouldOpenPolicyPicker": true
+            },
+            "civConstructions": {},
+            "questManager": {},
+            "religionManager": {},
+            "goldenAges": {
+                "storedHappiness": 15
+            },
+            "greatPeople": {
+                "pointsForNextGreatGeneralCounter": {
+                    "Great General": 200
+                }
+            },
+            "espionageManager": {},
+            "victoryManager": {},
+            "ruinsManager": {},
+            "diplomacy": {
+                "Belgrade": {
+                    "otherCivName": "Belgrade",
+                    "diplomaticStatus": "Peace",
+                    "smoothedOpinionOfOtherCiv": 0,
+                    "cachedSmoothedOpinionOfOtherCiv": 0
+                }
+            },
+            "proximity": {
+                "Belgrade": "None",
+                "Vatican City": "None",
+                "La Venta": "Close",
+                "Kathmandu": "Close",
+                "India": "Close",
+                "Ragusa": "Neighbors"
+            },
+            "popupAlerts": [
+                {
+                    "type": "FirstContact",
+                    "value": "Belgrade"
+                }
+            ],
+            "flagsCountdown": {
+                "TurnsTillCityStateElection": 12
+            },
+            "cities": [
+                {
+                    "location": {
+                        "x": -6,
+                        "y": 3
+                    },
+                    "id": "4f3837b9-b6c6-40c7-ad19-9598146947b1",
+                    "name": "Genoa",
+                    "foundingCiv": "Genoa",
+                    "population": {
+                        "foodStored": 2
+                    },
+                    "cityConstructions": {
+                        "builtBuildings": [
+                            "Palace"
+                        ],
+                        "inProgressConstructions": {
+                            "Warrior": 4
+                        },
+                        "constructionQueue": [
+                            "Warrior"
+                        ]
+                    },
+                    "expansion": {
+                        "cultureStored": 1
+                    },
+                    "religion": {},
+                    "espionage": {},
+                    "tiles": [
+                        {
+                            "x": -6,
+                            "y": 3
+                        },
+                        {
+                            "x": -7,
+                            "y": 2
+                        },
+                        {
+                            "x": -5,
+                            "y": 4
+                        },
+                        {
+                            "x": 4,
+                            "y": -6
+                        },
+                        {
+                            "x": 3,
+                            "y": -7
+                        },
+                        {
+                            "x": -6,
+                            "y": 2
+                        },
+                        {
+                            "x": -5,
+                            "y": 3
+                        }
+                    ],
+                    "workedTiles": [
+                        {
+                            "x": -5,
+                            "y": 4
+                        }
+                    ],
+                    "shouldReassignPopulation": true,
+                    "isOriginalCapital": true,
+                    "connectedToCapitalStatus": true
+                }
+            ],
+            "citiesCreated": 1,
+            "exploredRegion": {},
+            "hasEverOwnedOriginalCapital": true,
+            "totalCultureForContests": 1,
+            "cityStatePersonality": "Friendly",
+            "cityStateResource": "Jewelry"
+        },
+        {
+            "gold": 5,
+            "civName": "La Venta",
+            "civID": "La Venta",
+            "tech": {
+                "scienceOfLast8Turns": [
+                    4,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                ],
+                "techsResearched": [
+                    "Agriculture"
+                ],
+                "techsToResearch": [
+                    "Pottery"
+                ],
+                "techsInProgress": {
+                    "Pottery": 4
+                }
+            },
+            "policies": {
+                "storedCulture": 1,
+                "cultureOfLast8Turns": [
+                    1,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                ],
+                "shouldOpenPolicyPicker": true
+            },
+            "civConstructions": {},
+            "questManager": {},
+            "religionManager": {},
+            "goldenAges": {
+                "storedHappiness": 10
+            },
+            "greatPeople": {
+                "pointsForNextGreatGeneralCounter": {
+                    "Great General": 200
+                }
+            },
+            "espionageManager": {},
+            "victoryManager": {},
+            "ruinsManager": {},
+            "proximity": {
+                "Belgrade": "None",
+                "Genoa": "Close",
+                "Vatican City": "None",
+                "Kathmandu": "Neighbors",
+                "India": "Close",
+                "Ragusa": "Close"
+            },
+            "flagsCountdown": {
+                "TurnsTillCityStateElection": 15
+            },
+            "cities": [
+                {
+                    "location": {
+                        "x": -6,
+                        "y": -5
+                    },
+                    "id": "3dc5b6fa-902f-436f-8742-8af9ab54c700",
+                    "name": "La Venta",
+                    "foundingCiv": "La Venta",
+                    "population": {
+                        "foodStored": 2
+                    },
+                    "cityConstructions": {
+                        "builtBuildings": [
+                            "Palace"
+                        ],
+                        "inProgressConstructions": {
+                            "Warrior": 5
+                        },
+                        "constructionQueue": [
+                            "Warrior"
+                        ]
+                    },
+                    "expansion": {
+                        "cultureStored": 1
+                    },
+                    "religion": {},
+                    "espionage": {},
+                    "tiles": [
+                        {
+                            "x": -6,
+                            "y": -4
+                        },
+                        {
+                            "x": -7,
+                            "y": -5
+                        },
+                        {
+                            "x": -6,
+                            "y": -5
+                        },
+                        {
+                            "x": -7,
+                            "y": -6
+                        },
+                        {
+                            "x": -5,
+                            "y": -4
+                        },
+                        {
+                            "x": -6,
+                            "y": -6
+                        },
+                        {
+                            "x": -5,
+                            "y": -5
+                        }
+                    ],
+                    "workedTiles": [
+                        {
+                            "x": -6,
+                            "y": -4
+                        }
+                    ],
+                    "shouldReassignPopulation": true,
+                    "isOriginalCapital": true,
+                    "connectedToCapitalStatus": true
+                }
+            ],
+            "citiesCreated": 1,
+            "exploredRegion": {},
+            "hasEverOwnedOriginalCapital": true,
+            "totalCultureForContests": 1,
+            "cityStatePersonality": "Friendly"
+        },
+        {
+            "gold": 3,
+            "civName": "Kathmandu",
+            "civID": "Kathmandu",
+            "tech": {
+                "scienceOfLast8Turns": [
+                    4,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                ],
+                "techsResearched": [
+                    "Agriculture"
+                ],
+                "techsToResearch": [
+                    "Animal Husbandry"
+                ],
+                "techsInProgress": {
+                    "Animal Husbandry": 4
+                }
+            },
+            "policies": {
+                "storedCulture": 1,
+                "cultureOfLast8Turns": [
+                    1,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                ],
+                "shouldOpenPolicyPicker": true
+            },
+            "civConstructions": {},
+            "questManager": {},
+            "religionManager": {},
+            "goldenAges": {
+                "storedHappiness": 10
+            },
+            "greatPeople": {
+                "pointsForNextGreatGeneralCounter": {
+                    "Great General": 200
+                }
+            },
+            "espionageManager": {},
+            "victoryManager": {},
+            "ruinsManager": {},
+            "proximity": {
+                "Belgrade": "None",
+                "Genoa": "Close",
+                "La Venta": "Neighbors",
+                "Vatican City": "None",
+                "India": "Neighbors",
+                "Ragusa": "Neighbors"
+            },
+            "flagsCountdown": {
+                "TurnsTillCityStateElection": 4
+            },
+            "cities": [
+                {
+                    "location": {
+                        "x": 1,
+                        "y": -1
+                    },
+                    "id": "65c1e2c2-71ce-4b02-ac33-4f69c9c50987",
+                    "name": "Kathmandu",
+                    "foundingCiv": "Kathmandu",
+                    "population": {
+                        "foodStored": 2
+                    },
+                    "cityConstructions": {
+                        "builtBuildings": [
+                            "Palace"
+                        ],
+                        "inProgressConstructions": {
+                            "Warrior": 4
+                        },
+                        "constructionQueue": [
+                            "Warrior"
+                        ]
+                    },
+                    "expansion": {
+                        "cultureStored": 1
+                    },
+                    "religion": {},
+                    "espionage": {},
+                    "tiles": [
+                        {
+                            "y": -1
+                        },
+                        {
+                            "y": -2
+                        },
+                        {
+                            "x": 1,
+                            "y": -2
+                        },
+                        {
+                            "x": 2,
+                            "y": -1
+                        },
+                        {
+                            "x": 1,
+                            "y": -1
+                        },
+                        {
+                            "x": 2
+                        },
+                        {
+                            "x": 1
+                        }
+                    ],
+                    "workedTiles": [
+                        {
+                            "x": 1
+                        }
+                    ],
+                    "shouldReassignPopulation": true,
+                    "isOriginalCapital": true,
+                    "connectedToCapitalStatus": true
+                }
+            ],
+            "citiesCreated": 1,
+            "exploredRegion": {},
+            "hasEverOwnedOriginalCapital": true,
+            "totalCultureForContests": 1,
+            "cityStatePersonality": "Friendly"
+        },
+        {
+            "gold": 4,
+            "civName": "Ragusa",
+            "civID": "Ragusa",
+            "tech": {
+                "scienceOfLast8Turns": [
+                    4,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                ],
+                "techsResearched": [
+                    "Agriculture"
+                ],
+                "techsToResearch": [
+                    "Pottery"
+                ],
+                "techsInProgress": {
+                    "Pottery": 4
+                }
+            },
+            "policies": {
+                "storedCulture": 1,
+                "cultureOfLast8Turns": [
+                    1,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                ],
+                "shouldOpenPolicyPicker": true
+            },
+            "civConstructions": {},
+            "questManager": {},
+            "religionManager": {},
+            "goldenAges": {
+                "storedHappiness": 10
+            },
+            "greatPeople": {
+                "pointsForNextGreatGeneralCounter": {
+                    "Great General": 200
+                }
+            },
+            "espionageManager": {},
+            "victoryManager": {},
+            "ruinsManager": {},
+            "diplomacy": {
+                "Belgrade": {
+                    "otherCivName": "Belgrade",
+                    "diplomaticStatus": "Peace",
+                    "smoothedOpinionOfOtherCiv": 0,
+                    "cachedSmoothedOpinionOfOtherCiv": 0
+                }
+            },
+            "proximity": {
+                "Belgrade": "None",
+                "Genoa": "Neighbors",
+                "La Venta": "Close",
+                "Vatican City": "None",
+                "Kathmandu": "Neighbors",
+                "India": "Close"
+            },
+            "popupAlerts": [
+                {
+                    "type": "FirstContact",
+                    "value": "Belgrade"
+                }
+            ],
+            "flagsCountdown": {
+                "TurnsTillCityStateElection": 0
+            },
+            "cities": [
+                {
+                    "location": {
+                        "x": 6,
+                        "y": -2
+                    },
+                    "id": "a624e7a9-f058-4886-aec8-057a2eaa2738",
+                    "name": "Ragusa",
+                    "foundingCiv": "Ragusa",
+                    "population": {
+                        "foodStored": 2
+                    },
+                    "cityConstructions": {
+                        "builtBuildings": [
+                            "Palace"
+                        ],
+                        "inProgressConstructions": {
+                            "Scout": 4
+                        },
+                        "constructionQueue": [
+                            "Scout"
+                        ]
+                    },
+                    "expansion": {
+                        "cultureStored": 1
+                    },
+                    "religion": {},
+                    "espionage": {},
+                    "tiles": [
+                        {
+                            "x": 6,
+                            "y": -3
+                        },
+                        {
+                            "x": 7,
+                            "y": -2
+                        },
+                        {
+                            "x": 6,
+                            "y": -2
+                        },
+                        {
+                            "x": 5,
+                            "y": -3
+                        },
+                        {
+                            "x": 7,
+                            "y": -1
+                        },
+                        {
+                            "x": 6,
+                            "y": -1
+                        },
+                        {
+                            "x": 5,
+                            "y": -2
+                        }
+                    ],
+                    "workedTiles": [
+                        {
+                            "x": 6,
+                            "y": -1
+                        }
+                    ],
+                    "shouldReassignPopulation": true,
+                    "isOriginalCapital": true,
+                    "connectedToCapitalStatus": true
+                }
+            ],
+            "citiesCreated": 1,
+            "exploredRegion": {},
+            "hasEverOwnedOriginalCapital": true,
+            "totalCultureForContests": 1,
+            "cityStatePersonality": "Friendly"
+        },
+        {
+            "civName": "Belgrade",
+            "civID": "Belgrade",
+            "tech": {
+                "techsResearched": [
+                    "Agriculture"
+                ],
+                "techsToResearch": [
+                    "Pottery"
+                ]
+            },
+            "policies": {},
+            "civConstructions": {},
+            "questManager": {},
+            "religionManager": {},
+            "goldenAges": {
+                "storedHappiness": 12
+            },
+            "greatPeople": {
+                "pointsForNextGreatGeneralCounter": {
+                    "Great General": 200
+                }
+            },
+            "espionageManager": {},
+            "victoryManager": {},
+            "ruinsManager": {},
+            "diplomacy": {
+                "Genoa": {
+                    "otherCivName": "Genoa",
+                    "diplomaticStatus": "Peace",
+                    "diplomaticModifiers": {
+                        "YearsOfPeace": 0.5
+                    },
+                    "smoothedOpinionOfOtherCiv": 0,
+                    "cachedSmoothedOpinionOfOtherCiv": 0
+                },
+                "Ragusa": {
+                    "otherCivName": "Ragusa",
+                    "diplomaticStatus": "Peace",
+                    "diplomaticModifiers": {
+                        "YearsOfPeace": 0.5
+                    },
+                    "smoothedOpinionOfOtherCiv": 0,
+                    "cachedSmoothedOpinionOfOtherCiv": 0
+                }
+            },
+            "proximity": {
+                "Genoa": "None",
+                "La Venta": "None",
+                "Kathmandu": "None",
+                "India": "None",
+                "Ragusa": "None"
+            },
+            "popupAlerts": [
+                {
+                    "type": "FirstContact",
+                    "value": "Genoa"
+                }
+            ],
+            "flagsCountdown": {
+                "TurnsTillCityStateElection": 0
+            },
+            "exploredRegion": {},
+            "cityStatePersonality": "Friendly",
+            "cityStateUniqueUnit": "Panzer"
+        }
+    ],
+    "barbarians": {
+        "encampments": [
+            {
+                "position": {
+                    "x": 8,
+                    "y": 8
+                },
+                "countdown": 10,
+                "spawnedUnits": 0
+            },
+            {
+                "position": {
+                    "x": 3,
+                    "y": -5
+                },
+                "countdown": 10,
+                "spawnedUnits": 0
+            }
+        ]
+    },
+    "tileMap": {
+        "mapParameters": {
+            "type": "Fractal",
+            "mapSize": {
+                "name": "Tiny",
+                "radius": 10,
+                "width": 23,
+                "height": 15
+            },
+            "worldWrap": true,
+            "createdWithVersion": "4.20.3 (Build 1214)",
+            "seed": 1777646652449
+        },
+        "tileList": [
+            {
+                "baseTerrain": "Coast",
+                "exploredBy": [
+                    "Kathmandu"
+                ]
+            },
+            {
+                "position": {
+                    "x": -1,
+                    "y": -1
+                },
+                "baseTerrain": "Coast",
+                "exploredBy": [
+                    "Kathmandu"
+                ]
+            },
+            {
+                "position": {
+                    "x": 1,
+                    "y": 1
+                },
+                "baseTerrain": "Coast",
+                "exploredBy": [
+                    "Kathmandu"
+                ],
+                "resource": "Fish"
+            },
+            {
+                "position": {
+                    "y": -1
+                },
+                "baseTerrain": "Plains",
+                "exploredBy": [
+                    "Kathmandu"
+                ],
+                "roadOwner": "Kathmandu",
+                "history": {
+                    "0": [
+                        "Kathmandu",
+                        "N"
+                    ]
+                },
+                "continent": 1
+            },
+            {
+                "position": {
+                    "y": 1
+                },
+                "baseTerrain": "Coast"
+            },
+            {
+                "position": {
+                    "x": 1
+                },
+                "baseTerrain": "Plains",
+                "terrainFeatures": [
+                    "Jungle"
+                ],
+                "exploredBy": [
+                    "Kathmandu"
+                ],
+                "resource": "Aluminum",
+                "resourceAmount": 3,
+                "roadOwner": "Kathmandu",
+                "history": {
+                    "0": [
+                        "Kathmandu",
+                        "N"
+                    ]
+                },
+                "continent": 1
+            },
+            {
+                "position": {
+                    "x": -1
+                },
+                "baseTerrain": "Ocean"
+            },
+            {
+                "position": {
+                    "x": -2,
+                    "y": -2
+                },
+                "baseTerrain": "Grassland",
+                "terrainFeatures": [
+                    "Forest"
+                ],
+                "exploredBy": [
+                    "Kathmandu"
+                ],
+                "resource": "Deer",
+                "continent": 1
+            },
+            {
+                "position": {
+                    "x": 2,
+                    "y": 2
+                },
+                "baseTerrain": "Coast",
+                "resource": "Fish"
+            },
+            {
+                "position": {
+                    "x": -1,
+                    "y": -2
+                },
+                "baseTerrain": "Grassland",
+                "exploredBy": [
+                    "Kathmandu"
+                ],
+                "continent": 1
+            },
+            {
+                "position": {
+                    "x": 1,
+                    "y": 2
+                },
+                "baseTerrain": "Grassland",
+                "resource": "Coal",
+                "resourceAmount": 3,
+                "continent": 5
+            },
+            {
+                "position": {
+                    "y": -2
+                },
+                "baseTerrain": "Plains",
+                "exploredBy": [
+                    "Kathmandu"
+                ],
+                "roadOwner": "Kathmandu",
+                "history": {
+                    "0": [
+                        "Kathmandu",
+                        "N"
+                    ]
+                },
+                "continent": 1
+            },
+            {
+                "position": {
+                    "y": 2
+                },
+                "baseTerrain": "Plains",
+                "resource": "Wheat",
+                "continent": 5
+            },
+            {
+                "position": {
+                    "x": 1,
+                    "y": -1
+                },
+                "baseTerrain": "Grassland",
+                "exploredBy": [
+                    "Kathmandu"
+                ],
+                "improvement": "City center",
+                "roadOwner": "Kathmandu",
+                "history": {
+                    "0": [
+                        "Kathmandu",
+                        "R"
+                    ]
+                },
+                "continent": 1
+            },
+            {
+                "position": {
+                    "x": -1,
+                    "y": 1
+                },
+                "baseTerrain": "Coast"
+            },
+            {
+                "position": {
+                    "x": 2
+                },
+                "baseTerrain": "Coast",
+                "exploredBy": [
+                    "Kathmandu"
+                ],
+                "roadOwner": "Kathmandu",
+                "history": {
+                    "0": [
+                        "Kathmandu",
+                        "N"
+                    ]
+                }
+            },
+            {
+                "position": {
+                    "x": -2
+                },
+                "baseTerrain": "Coast"
+            },
+            {
+                "position": {
+                    "x": 2,
+                    "y": 1
+                },
+                "baseTerrain": "Coast",
+                "exploredBy": [
+                    "Kathmandu"
+                ]
+            },
+            {
+                "position": {
+                    "x": -2,
+                    "y": -1
+                },
+                "baseTerrain": "Coast"
+            },
+            {
+                "position": {
+                    "x": -3,
+                    "y": -3
+                },
+                "baseTerrain": "Plains",
+                "terrainFeatures": [
+                    "Forest"
+                ],
+                "resource": "Deer",
+                "continent": 1
+            },
+            {
+                "position": {
+                    "x": 3,
+                    "y": 3
+                },
+                "baseTerrain": "Coast"
+            },
+            {
+                "position": {
+                    "x": -2,
+                    "y": -3
+                },
+                "baseTerrain": "Plains",
+                "terrainFeatures": [
+                    "Jungle"
+                ],
+                "exploredBy": [
+                    "Kathmandu"
+                ],
+                "continent": 1
+            },
+            {
+                "position": {
+                    "x": 2,
+                    "y": 3
+                },
+                "baseTerrain": "Grassland",
+                "resource": "Stone",
+                "continent": 5
+            },
+            {
+                "position": {
+                    "x": -1,
+                    "y": -3
+                },
+                "baseTerrain": "Grassland",
+                "exploredBy": [
+                    "Kathmandu"
+                ],
+                "resource": "Cotton",
+                "continent": 1
+            },
+            {
+                "position": {
+                    "x": 1,
+                    "y": 3
+                },
+                "baseTerrain": "Coast"
+            },
+            {
+                "position": {
+                    "y": -3
+                },
+                "baseTerrain": "Grassland",
+                "exploredBy": [
+                    "Kathmandu"
+                ],
+                "continent": 1
+            },
+            {
+                "position": {
+                    "y": 3
+                },
+                "baseTerrain": "Coast"
+            },
+            {
+                "position": {
+                    "x": 1,
+                    "y": -2
+                },
+                "baseTerrain": "Coast",
+                "exploredBy": [
+                    "Kathmandu"
+                ],
+                "roadOwner": "Kathmandu",
+                "history": {
+                    "0": [
+                        "Kathmandu",
+                        "N"
+                    ]
+                }
+            },
+            {
+                "position": {
+                    "x": -1,
+                    "y": 2
+                },
+                "baseTerrain": "Coast",
+                "terrainFeatures": [
+                    "Atoll"
+                ]
+            },
+            {
+                "position": {
+                    "x": 2,
+                    "y": -1
+                },
+                "baseTerrain": "Grassland",
+                "terrainFeatures": [
+                    "Hill"
+                ],
+                "exploredBy": [
+                    "Kathmandu"
+                ],
+                "resource": "Sheep",
+                "roadOwner": "Kathmandu",
+                "history": {
+                    "0": [
+                        "Kathmandu",
+                        "N"
+                    ]
+                },
+                "continent": 1
+            },
+            {
+                "position": {
+                    "x": -2,
+                    "y": 1
+                },
+                "baseTerrain": "Coast"
+            },
+            {
+                "position": {
+                    "x": 3
+                },
+                "baseTerrain": "Coast",
+                "exploredBy": [
+                    "Kathmandu"
+                ]
+            },
+            {
+                "position": {
+                    "x": -3
+                },
+                "baseTerrain": "Grassland",
+                "resource": "Stone",
+                "continent": 1
+            },
+            {
+                "position": {
+                    "x": 3,
+                    "y": 1
+                },
+                "baseTerrain": "Coast",
+                "exploredBy": [
+                    "Kathmandu"
+                ]
+            },
+            {
+                "position": {
+                    "x": -3,
+                    "y": -1
+                },
+                "baseTerrain": "Grassland",
+                "resource": "Stone",
+                "continent": 1
+            },
+            {
+                "position": {
+                    "x": 3,
+                    "y": 2
+                },
+                "baseTerrain": "Ocean"
+            },
+            {
+                "position": {
+                    "x": -3,
+                    "y": -2
+                },
+                "baseTerrain": "Plains",
+                "continent": 1
+            },
+            {
+                "position": {
+                    "x": -4,
+                    "y": -4
+                },
+                "baseTerrain": "Plains",
+                "exploredBy": [
+                    "La Venta"
+                ],
+                "continent": 1
+            },
+            {
+                "position": {
+                    "x": 4,
+                    "y": 4
+                },
+                "baseTerrain": "Coast"
+            },
+            {
+                "position": {
+                    "x": -3,
+                    "y": -4
+                },
+                "baseTerrain": "Desert",
+                "continent": 1
+            },
+            {
+                "position": {
+                    "x": 3,
+                    "y": 4
+                },
+                "baseTerrain": "Coast",
+                "exploredBy": [
+                    "India"
+                ],
+                "resource": "Crab"
+            },
+            {
+                "position": {
+                    "x": -2,
+                    "y": -4
+                },
+                "baseTerrain": "Grassland",
+                "terrainFeatures": [
+                    "Jungle"
+                ],
+                "exploredBy": [
+                    "Kathmandu"
+                ],
+                "resource": "Bananas",
+                "continent": 1
+            },
+            {
+                "position": {
+                    "x": 2,
+                    "y": 4
+                },
+                "baseTerrain": "Coast",
+                "exploredBy": [
+                    "India"
+                ],
+                "resource": "Whales"
+            },
+            {
+                "position": {
+                    "x": -1,
+                    "y": -4
+                },
+                "baseTerrain": "Coast"
+            },
+            {
+                "position": {
+                    "x": 1,
+                    "y": 4
+                },
+                "baseTerrain": "Ocean",
+                "exploredBy": [
+                    "India"
+                ]
+            },
+            {
+                "position": {
+                    "y": -4
+                },
+                "baseTerrain": "Coast"
+            },
+            {
+                "position": {
+                    "y": 4
+                },
+                "baseTerrain": "Coast"
+            },
+            {
+                "position": {
+                    "x": 1,
+                    "y": -3
+                },
+                "baseTerrain": "Coast",
+                "exploredBy": [
+                    "Kathmandu"
+                ]
+            },
+            {
+                "position": {
+                    "x": -1,
+                    "y": 3
+                },
+                "baseTerrain": "Coast",
+                "resource": "Fish"
+            },
+            {
+                "position": {
+                    "x": 2,
+                    "y": -2
+                },
+                "baseTerrain": "Coast",
+                "exploredBy": [
+                    "Kathmandu"
+                ]
+            },
+            {
+                "position": {
+                    "x": -2,
+                    "y": 2
+                },
+                "baseTerrain": "Coast"
+            },
+            {
+                "position": {
+                    "x": 3,
+                    "y": -1
+                },
+                "baseTerrain": "Coast",
+                "exploredBy": [
+                    "Kathmandu"
+                ]
+            },
+            {
+                "position": {
+                    "x": -3,
+                    "y": 1
+                },
+                "baseTerrain": "Coast"
+            },
+            {
+                "position": {
+                    "x": 4
+                },
+                "baseTerrain": "Ocean"
+            },
+            {
+                "position": {
+                    "x": -4
+                },
+                "baseTerrain": "Grassland",
+                "resource": "Cattle",
+                "continent": 1
+            },
+            {
+                "position": {
+                    "x": 4,
+                    "y": 1
+                },
+                "baseTerrain": "Ocean"
+            },
+            {
+                "position": {
+                    "x": -4,
+                    "y": -1
+                },
+                "baseTerrain": "Plains",
+                "continent": 1
+            },
+            {
+                "position": {
+                    "x": 4,
+                    "y": 2
+                },
+                "baseTerrain": "Coast"
+            },
+            {
+                "position": {
+                    "x": -4,
+                    "y": -2
+                },
+                "baseTerrain": "Grassland",
+                "resource": "Cattle",
+                "continent": 1
+            },
+            {
+                "position": {
+                    "x": 4,
+                    "y": 3
+                },
+                "baseTerrain": "Ocean"
+            },
+            {
+                "position": {
+                    "x": -4,
+                    "y": -3
+                },
+                "baseTerrain": "Desert",
+                "terrainFeatures": [
+                    "Hill"
+                ],
+                "exploredBy": [
+                    "La Venta"
+                ],
+                "continent": 1
+            },
+            {
+                "position": {
+                    "x": -5,
+                    "y": -5
+                },
+                "baseTerrain": "Grassland",
+                "terrainFeatures": [
+                    "Hill",
+                    "Forest"
+                ],
+                "exploredBy": [
+                    "La Venta"
+                ],
+                "roadOwner": "La Venta",
+                "history": {
+                    "0": [
+                        "La Venta",
+                        "N"
+                    ]
+                },
+                "continent": 1
+            },
+            {
+                "position": {
+                    "x": 5,
+                    "y": 5
+                },
+                "baseTerrain": "Plains",
+                "terrainFeatures": [
+                    "Hill",
+                    "Forest"
+                ],
+                "continent": 2
+            },
+            {
+                "position": {
+                    "x": -4,
+                    "y": -5
+                },
+                "baseTerrain": "Plains",
+                "exploredBy": [
+                    "La Venta"
+                ],
+                "continent": 1
+            },
+            {
+                "position": {
+                    "x": 4,
+                    "y": 5
+                },
+                "baseTerrain": "Mountain",
+                "exploredBy": [
+                    "India"
+                ]
+            },
+            {
+                "position": {
+                    "x": -3,
+                    "y": -5
+                },
+                "baseTerrain": "Desert",
+                "continent": 1
+            },
+            {
+                "position": {
+                    "x": 3,
+                    "y": 5
+                },
+                "baseTerrain": "Mountain",
+                "exploredBy": [
+                    "India"
+                ],
+                "roadOwner": "India",
+                "history": {
+                    "0": [
+                        "India",
+                        "N"
+                    ]
+                }
+            },
+            {
+                "position": {
+                    "x": -2,
+                    "y": -5
+                },
+                "baseTerrain": "Coast"
+            },
+            {
+                "position": {
+                    "x": 2,
+                    "y": 5
+                },
+                "baseTerrain": "Coast",
+                "exploredBy": [
+                    "India"
+                ],
+                "resource": "Whales",
+                "roadOwner": "India",
+                "history": {
+                    "0": [
+                        "India",
+                        "N"
+                    ]
+                }
+            },
+            {
+                "position": {
+                    "x": -1,
+                    "y": -5
+                },
+                "baseTerrain": "Coast"
+            },
+            {
+                "position": {
+                    "x": 1,
+                    "y": 5
+                },
+                "baseTerrain": "Coast",
+                "exploredBy": [
+                    "India"
+                ]
+            },
+            {
+                "position": {
+                    "y": -5
+                },
+                "baseTerrain": "Coast"
+            },
+            {
+                "position": {
+                    "y": 5
+                },
+                "baseTerrain": "Grassland",
+                "terrainFeatures": [
+                    "Forest"
+                ],
+                "exploredBy": [
+                    "Belgrade",
+                    "India"
+                ],
+                "resource": "Uranium",
+                "resourceAmount": 2,
+                "continent": 2
+            },
+            {
+                "position": {
+                    "x": 1,
+                    "y": -4
+                },
+                "baseTerrain": "Coast"
+            },
+            {
+                "position": {
+                    "x": -1,
+                    "y": 4
+                },
+                "baseTerrain": "Coast",
+                "exploredBy": [
+                    "Belgrade"
+                ],
+                "resource": "Fish"
+            },
+            {
+                "position": {
+                    "x": 2,
+                    "y": -3
+                },
+                "baseTerrain": "Coast",
+                "resource": "Fish"
+            },
+            {
+                "position": {
+                    "x": -2,
+                    "y": 3
+                },
+                "baseTerrain": "Coast",
+                "terrainFeatures": [
+                    "Atoll"
+                ],
+                "exploredBy": [
+                    "Belgrade"
+                ]
+            },
+            {
+                "position": {
+                    "x": 3,
+                    "y": -2
+                },
+                "baseTerrain": "Ocean"
+            },
+            {
+                "position": {
+                    "x": -3,
+                    "y": 2
+                },
+                "baseTerrain": "Ocean"
+            },
+            {
+                "position": {
+                    "x": 4,
+                    "y": -1
+                },
+                "baseTerrain": "Ocean"
+            },
+            {
+                "position": {
+                    "x": -4,
+                    "y": 1
+                },
+                "baseTerrain": "Coast",
+                "resource": "Fish"
+            },
+            {
+                "position": {
+                    "x": 5
+                },
+                "baseTerrain": "Coast"
+            },
+            {
+                "position": {
+                    "x": -5
+                },
+                "baseTerrain": "Coast"
+            },
+            {
+                "position": {
+                    "x": 5,
+                    "y": 1
+                },
+                "baseTerrain": "Coast"
+            },
+            {
+                "position": {
+                    "x": -5,
+                    "y": -1
+                },
+                "baseTerrain": "Grassland",
+                "terrainFeatures": [
+                    "Jungle"
+                ],
+                "resource": "Uranium",
+                "resourceAmount": 4,
+                "continent": 1
+            },
+            {
+                "position": {
+                    "x": 5,
+                    "y": 2
+                },
+                "baseTerrain": "Coast"
+            },
+            {
+                "position": {
+                    "x": -5,
+                    "y": -2
+                },
+                "baseTerrain": "Desert",
+                "continent": 1
+            },
+            {
+                "position": {
+                    "x": 5,
+                    "y": 3
+                },
+                "baseTerrain": "Coast"
+            },
+            {
+                "position": {
+                    "x": -5,
+                    "y": -3
+                },
+                "baseTerrain": "Desert",
+                "terrainFeatures": [
+                    "Hill"
+                ],
+                "exploredBy": [
+                    "La Venta"
+                ],
+                "continent": 1
+            },
+            {
+                "position": {
+                    "x": 5,
+                    "y": 4
+                },
+                "baseTerrain": "Coast"
+            },
+            {
+                "position": {
+                    "x": -5,
+                    "y": -4
+                },
+                "baseTerrain": "Grassland",
+                "terrainFeatures": [
+                    "Hill"
+                ],
+                "exploredBy": [
+                    "La Venta"
+                ],
+                "resource": "Sheep",
+                "roadOwner": "La Venta",
+                "history": {
+                    "0": [
+                        "La Venta",
+                        "N"
+                    ]
+                },
+                "continent": 1
+            },
+            {
+                "position": {
+                    "x": -6,
+                    "y": -6
+                },
+                "baseTerrain": "Tundra",
+                "exploredBy": [
+                    "La Venta"
+                ],
+                "resource": "Stone",
+                "roadOwner": "La Venta",
+                "history": {
+                    "0": [
+                        "La Venta",
+                        "N"
+                    ]
+                },
+                "continent": 1
+            },
+            {
+                "position": {
+                    "x": 6,
+                    "y": 6
+                },
+                "baseTerrain": "Mountain",
+                "exploredBy": [
+                    "Barbarians",
+                    "India"
+                ]
+            },
+            {
+                "position": {
+                    "x": -5,
+                    "y": -6
+                },
+                "baseTerrain": "Plains",
+                "exploredBy": [
+                    "La Venta"
+                ],
+                "continent": 1
+            },
+            {
+                "position": {
+                    "x": 5,
+                    "y": 6
+                },
+                "baseTerrain": "Mountain",
+                "exploredBy": [
+                    "Barbarians",
+                    "India"
+                ]
+            },
+            {
+                "position": {
+                    "x": -4,
+                    "y": -6
+                },
+                "baseTerrain": "Coast"
+            },
+            {
+                "position": {
+                    "x": 4,
+                    "y": 6
+                },
+                "baseTerrain": "Plains",
+                "exploredBy": [
+                    "India"
+                ],
+                "roadOwner": "India",
+                "history": {
+                    "0": [
+                        "India",
+                        "N"
+                    ]
+                },
+                "continent": 2
+            },
+            {
+                "position": {
+                    "x": -3,
+                    "y": -6
+                },
+                "baseTerrain": "Coast"
+            },
+            {
+                "position": {
+                    "x": 3,
+                    "y": 6
+                },
+                "baseTerrain": "Plains",
+                "exploredBy": [
+                    "India"
+                ],
+                "improvement": "City center",
+                "roadOwner": "India",
+                "history": {
+                    "0": [
+                        "India",
+                        "R"
+                    ]
+                },
+                "continent": 2
+            },
+            {
+                "position": {
+                    "x": -2,
+                    "y": -6
+                },
+                "baseTerrain": "Coast"
+            },
+            {
+                "position": {
+                    "x": 2,
+                    "y": 6
+                },
+                "baseTerrain": "Coast",
+                "exploredBy": [
+                    "India"
+                ],
+                "resource": "Fish",
+                "roadOwner": "India",
+                "history": {
+                    "0": [
+                        "India",
+                        "N"
+                    ]
+                }
+            },
+            {
+                "position": {
+                    "x": -1,
+                    "y": -6
+                },
+                "baseTerrain": "Coast"
+            },
+            {
+                "position": {
+                    "x": 1,
+                    "y": 6
+                },
+                "baseTerrain": "Desert",
+                "exploredBy": [
+                    "India"
+                ],
+                "continent": 2
+            },
+            {
+                "position": {
+                    "y": -6
+                },
+                "baseTerrain": "Coast"
+            },
+            {
+                "position": {
+                    "y": 6
+                },
+                "baseTerrain": "Grassland",
+                "terrainFeatures": [
+                    "Forest"
+                ],
+                "exploredBy": [
+                    "Belgrade",
+                    "India"
+                ],
+                "continent": 2
+            },
+            {
+                "position": {
+                    "x": 1,
+                    "y": -5
+                },
+                "baseTerrain": "Coast",
+                "exploredBy": [
+                    "Barbarians"
+                ]
+            },
+            {
+                "position": {
+                    "x": -1,
+                    "y": 5
+                },
+                "baseTerrain": "Grassland",
+                "exploredBy": [
+                    "Belgrade"
+                ],
+                "continent": 2
+            },
+            {
+                "position": {
+                    "x": 2,
+                    "y": -4
+                },
+                "baseTerrain": "Plains",
+                "exploredBy": [
+                    "Barbarians"
+                ],
+                "resource": "Wheat",
+                "continent": 3
+            },
+            {
+                "position": {
+                    "x": -2,
+                    "y": 4
+                },
+                "baseTerrain": "Coast",
+                "exploredBy": [
+                    "Belgrade"
+                ],
+                "resource": "Whales"
+            },
+            {
+                "position": {
+                    "x": 3,
+                    "y": -3
+                },
+                "baseTerrain": "Coast",
+                "exploredBy": [
+                    "Barbarians"
+                ]
+            },
+            {
+                "position": {
+                    "x": -3,
+                    "y": 3
+                },
+                "baseTerrain": "Coast",
+                "exploredBy": [
+                    "Belgrade"
+                ]
+            },
+            {
+                "position": {
+                    "x": 4,
+                    "y": -2
+                },
+                "baseTerrain": "Coast",
+                "exploredBy": [
+                    "Ragusa"
+                ]
+            },
+            {
+                "position": {
+                    "x": -4,
+                    "y": 2
+                },
+                "baseTerrain": "Coast"
+            },
+            {
+                "position": {
+                    "x": 5,
+                    "y": -1
+                },
+                "baseTerrain": "Coast",
+                "exploredBy": [
+                    "Ragusa"
+                ]
+            },
+            {
+                "position": {
+                    "x": -5,
+                    "y": 1
+                },
+                "baseTerrain": "Coast"
+            },
+            {
+                "position": {
+                    "x": 6
+                },
+                "baseTerrain": "Coast",
+                "exploredBy": [
+                    "Ragusa"
+                ]
+            },
+            {
+                "position": {
+                    "x": -6
+                },
+                "baseTerrain": "Desert",
+                "continent": 1
+            },
+            {
+                "position": {
+                    "x": 6,
+                    "y": 1
+                },
+                "baseTerrain": "Desert",
+                "exploredBy": [
+                    "Vatican City"
+                ],
+                "resource": "Iron",
+                "resourceAmount": 2,
+                "continent": 2
+            },
+            {
+                "position": {
+                    "x": -6,
+                    "y": -1
+                },
+                "baseTerrain": "Desert",
+                "continent": 1
+            },
+            {
+                "position": {
+                    "x": 6,
+                    "y": 2
+                },
+                "baseTerrain": "Grassland",
+                "exploredBy": [
+                    "Vatican City"
+                ],
+                "resource": "Cotton",
+                "continent": 2
+            },
+            {
+                "position": {
+                    "x": -6,
+                    "y": -2
+                },
+                "baseTerrain": "Desert",
+                "resource": "Stone",
+                "continent": 1
+            },
+            {
+                "position": {
+                    "x": 6,
+                    "y": 3
+                },
+                "baseTerrain": "Plains",
+                "exploredBy": [
+                    "Vatican City"
+                ],
+                "resource": "Wheat",
+                "continent": 2
+            },
+            {
+                "position": {
+                    "x": -6,
+                    "y": -3
+                },
+                "baseTerrain": "Desert",
+                "terrainFeatures": [
+                    "Hill"
+                ],
+                "exploredBy": [
+                    "La Venta"
+                ],
+                "continent": 1
+            },
+            {
+                "position": {
+                    "x": 6,
+                    "y": 4
+                },
+                "baseTerrain": "Coast"
+            },
+            {
+                "position": {
+                    "x": -6,
+                    "y": -4
+                },
+                "baseTerrain": "Grassland",
+                "exploredBy": [
+                    "La Venta"
+                ],
+                "resource": "Cotton",
+                "roadOwner": "La Venta",
+                "history": {
+                    "0": [
+                        "La Venta",
+                        "N"
+                    ]
+                },
+                "continent": 1
+            },
+            {
+                "position": {
+                    "x": 6,
+                    "y": 5
+                },
+                "baseTerrain": "Grassland",
+                "terrainFeatures": [
+                    "Hill",
+                    "Forest"
+                ],
+                "exploredBy": [
+                    "Barbarians"
+                ],
+                "continent": 2
+            },
+            {
+                "position": {
+                    "x": -6,
+                    "y": -5
+                },
+                "baseTerrain": "Tundra",
+                "terrainFeatures": [
+                    "Hill"
+                ],
+                "exploredBy": [
+                    "La Venta"
+                ],
+                "resource": "Sheep",
+                "improvement": "City center",
+                "roadOwner": "La Venta",
+                "history": {
+                    "0": [
+                        "La Venta",
+                        "R"
+                    ]
+                },
+                "continent": 1
+            },
+            {
+                "position": {
+                    "x": -7,
+                    "y": -7
+                },
+                "baseTerrain": "Coast",
+                "terrainFeatures": [
+                    "Atoll"
+                ],
+                "exploredBy": [
+                    "La Venta"
+                ]
+            },
+            {
+                "position": {
+                    "x": 7,
+                    "y": 7
+                },
+                "baseTerrain": "Tundra",
+                "terrainFeatures": [
+                    "Hill"
+                ],
+                "exploredBy": [
+                    "Barbarians",
+                    "India"
+                ],
+                "resource": "Sheep",
+                "continent": 2
+            },
+            {
+                "position": {
+                    "x": -6,
+                    "y": -7
+                },
+                "baseTerrain": "Coast",
+                "exploredBy": [
+                    "La Venta"
+                ]
+            },
+            {
+                "position": {
+                    "x": 6,
+                    "y": 7
+                },
+                "baseTerrain": "Tundra",
+                "terrainFeatures": [
+                    "Hill"
+                ],
+                "exploredBy": [
+                    "Barbarians",
+                    "India"
+                ],
+                "continent": 2
+            },
+            {
+                "position": {
+                    "x": -5,
+                    "y": -7
+                },
+                "baseTerrain": "Coast"
+            },
+            {
+                "position": {
+                    "x": 5,
+                    "y": 7
+                },
+                "baseTerrain": "Mountain",
+                "exploredBy": [
+                    "Barbarians",
+                    "India"
+                ]
+            },
+            {
+                "position": {
+                    "x": -4,
+                    "y": -7
+                },
+                "baseTerrain": "Plains",
+                "terrainFeatures": [
+                    "Jungle"
+                ],
+                "resource": "Bananas",
+                "continent": 4
+            },
+            {
+                "position": {
+                    "x": 4,
+                    "y": 7
+                },
+                "baseTerrain": "Plains",
+                "terrainFeatures": [
+                    "Jungle"
+                ],
+                "exploredBy": [
+                    "India"
+                ],
+                "roadOwner": "India",
+                "history": {
+                    "0": [
+                        "India",
+                        "N"
+                    ]
+                },
+                "continent": 2
+            },
+            {
+                "position": {
+                    "x": -3,
+                    "y": -7
+                },
+                "baseTerrain": "Coast"
+            },
+            {
+                "position": {
+                    "x": 3,
+                    "y": 7
+                },
+                "baseTerrain": "Plains",
+                "exploredBy": [
+                    "India"
+                ],
+                "resource": "Wheat",
+                "roadOwner": "India",
+                "history": {
+                    "0": [
+                        "India",
+                        "N"
+                    ]
+                },
+                "continent": 2
+            },
+            {
+                "position": {
+                    "x": -2,
+                    "y": -7
+                },
+                "baseTerrain": "Plains",
+                "resource": "Horses",
+                "resourceAmount": 2,
+                "continent": 0
+            },
+            {
+                "position": {
+                    "x": 2,
+                    "y": 7
+                },
+                "baseTerrain": "Plains",
+                "terrainFeatures": [
+                    "Hill"
+                ],
+                "exploredBy": [
+                    "India"
+                ],
+                "resource": "Horses",
+                "resourceAmount": 2,
+                "continent": 2
+            },
+            {
+                "position": {
+                    "x": -1,
+                    "y": -7
+                },
+                "baseTerrain": "Desert",
+                "resource": "Wheat",
+                "continent": 0
+            },
+            {
+                "position": {
+                    "x": 1,
+                    "y": 7
+                },
+                "baseTerrain": "Desert",
+                "terrainFeatures": [
+                    "Hill"
+                ],
+                "exploredBy": [
+                    "Belgrade",
+                    "India"
+                ],
+                "continent": 2
+            },
+            {
+                "position": {
+                    "y": -7
+                },
+                "baseTerrain": "Grassland",
+                "resource": "Cotton",
+                "continent": 0
+            },
+            {
+                "position": {
+                    "y": 7
+                },
+                "baseTerrain": "Desert",
+                "exploredBy": [
+                    "Belgrade"
+                ],
+                "resource": "Stone",
+                "continent": 2
+            },
+            {
+                "position": {
+                    "x": 1,
+                    "y": -6
+                },
+                "baseTerrain": "Coast",
+                "exploredBy": [
+                    "Barbarians"
+                ]
+            },
+            {
+                "position": {
+                    "x": -1,
+                    "y": 6
+                },
+                "baseTerrain": "Grassland",
+                "exploredBy": [
+                    "Belgrade"
+                ],
+                "continent": 2
+            },
+            {
+                "position": {
+                    "x": 2,
+                    "y": -5
+                },
+                "baseTerrain": "Coast",
+                "exploredBy": [
+                    "Barbarians"
+                ]
+            },
+            {
+                "civilianUnit": {
+                    "owner": "Belgrade",
+                    "originalOwner": "Belgrade",
+                    "name": "Settler",
+                    "id": 8,
+                    "movementMemories": [
+                        {
+                            "position": {
+                                "x": -3,
+                                "y": 6
+                            }
+                        },
+                        {
+                            "position": {
+                                "x": -2,
+                                "y": 5
+                            }
+                        }
+                    ]
+                },
+                "position": {
+                    "x": -2,
+                    "y": 5
+                },
+                "baseTerrain": "Grassland",
+                "exploredBy": [
+                    "Belgrade"
+                ],
+                "continent": 2
+            },
+            {
+                "position": {
+                    "x": 3,
+                    "y": -4
+                },
+                "baseTerrain": "Coast",
+                "exploredBy": [
+                    "Barbarians"
+                ]
+            },
+            {
+                "position": {
+                    "x": -3,
+                    "y": 4
+                },
+                "baseTerrain": "Plains",
+                "exploredBy": [
+                    "Belgrade"
+                ],
+                "continent": 2
+            },
+            {
+                "position": {
+                    "x": 4,
+                    "y": -3
+                },
+                "baseTerrain": "Coast",
+                "exploredBy": [
+                    "Barbarians",
+                    "Ragusa"
+                ]
+            },
+            {
+                "position": {
+                    "x": -4,
+                    "y": 3
+                },
+                "baseTerrain": "Coast",
+                "exploredBy": [
+                    "Belgrade",
+                    "Genoa"
+                ],
+                "resource": "Fish"
+            },
+            {
+                "position": {
+                    "x": 5,
+                    "y": -2
+                },
+                "baseTerrain": "Coast",
+                "exploredBy": [
+                    "Ragusa"
+                ],
+                "roadOwner": "Ragusa",
+                "history": {
+                    "0": [
+                        "Ragusa",
+                        "N"
+                    ]
+                }
+            },
+            {
+                "position": {
+                    "x": -5,
+                    "y": 2
+                },
+                "baseTerrain": "Grassland",
+                "terrainFeatures": [
+                    "Marsh"
+                ],
+                "exploredBy": [
+                    "Genoa"
+                ],
+                "resource": "Oil",
+                "resourceAmount": 7,
+                "continent": 1
+            },
+            {
+                "position": {
+                    "x": 6,
+                    "y": -1
+                },
+                "baseTerrain": "Coast",
+                "exploredBy": [
+                    "Ragusa"
+                ],
+                "resource": "Fish",
+                "roadOwner": "Ragusa",
+                "history": {
+                    "0": [
+                        "Ragusa",
+                        "N"
+                    ]
+                }
+            },
+            {
+                "position": {
+                    "x": -6,
+                    "y": 1
+                },
+                "baseTerrain": "Grassland",
+                "exploredBy": [
+                    "Genoa"
+                ],
+                "continent": 1
+            },
+            {
+                "position": {
+                    "x": 7
+                },
+                "baseTerrain": "Coast",
+                "exploredBy": [
+                    "Ragusa"
+                ],
+                "resource": "Fish"
+            },
+            {
+                "position": {
+                    "x": -7
+                },
+                "baseTerrain": "Desert",
+                "resource": "Wheat",
+                "continent": 1
+            },
+            {
+                "position": {
+                    "x": 7,
+                    "y": 1
+                },
+                "baseTerrain": "Coast",
+                "exploredBy": [
+                    "Vatican City"
+                ]
+            },
+            {
+                "position": {
+                    "x": -7,
+                    "y": -1
+                },
+                "baseTerrain": "Lakes"
+            },
+            {
+                "position": {
+                    "x": 7,
+                    "y": 2
+                },
+                "baseTerrain": "Coast",
+                "exploredBy": [
+                    "Vatican City"
+                ]
+            },
+            {
+                "position": {
+                    "x": -7,
+                    "y": -2
+                },
+                "baseTerrain": "Desert",
+                "terrainFeatures": [
+                    "Hill"
+                ],
+                "continent": 1
+            },
+            {
+                "position": {
+                    "x": 7,
+                    "y": 3
+                },
+                "baseTerrain": "Plains",
+                "exploredBy": [
+                    "Vatican City"
+                ],
+                "continent": 2
+            },
+            {
+                "position": {
+                    "x": -7,
+                    "y": -3
+                },
+                "baseTerrain": "Desert",
+                "terrainFeatures": [
+                    "Hill"
+                ],
+                "continent": 1
+            },
+            {
+                "position": {
+                    "x": 7,
+                    "y": 4
+                },
+                "baseTerrain": "Plains",
+                "exploredBy": [
+                    "Vatican City"
+                ],
+                "continent": 2
+            },
+            {
+                "position": {
+                    "x": -7,
+                    "y": -4
+                },
+                "baseTerrain": "Grassland",
+                "terrainFeatures": [
+                    "Hill"
+                ],
+                "exploredBy": [
+                    "La Venta"
+                ],
+                "continent": 1
+            },
+            {
+                "position": {
+                    "x": 7,
+                    "y": 5
+                },
+                "baseTerrain": "Plains",
+                "terrainFeatures": [
+                    "Jungle"
+                ],
+                "exploredBy": [
+                    "Vatican City"
+                ],
+                "continent": 2
+            },
+            {
+                "position": {
+                    "x": -7,
+                    "y": -5
+                },
+                "baseTerrain": "Tundra",
+                "exploredBy": [
+                    "La Venta"
+                ],
+                "roadOwner": "La Venta",
+                "history": {
+                    "0": [
+                        "La Venta",
+                        "N"
+                    ]
+                },
+                "continent": 1
+            },
+            {
+                "position": {
+                    "x": 7,
+                    "y": 6
+                },
+                "baseTerrain": "Tundra",
+                "terrainFeatures": [
+                    "Forest"
+                ],
+                "resource": "Uranium",
+                "resourceAmount": 4,
+                "continent": 2
+            },
+            {
+                "position": {
+                    "x": -7,
+                    "y": -6
+                },
+                "baseTerrain": "Tundra",
+                "exploredBy": [
+                    "La Venta"
+                ],
+                "resource": "Stone",
+                "roadOwner": "La Venta",
+                "history": {
+                    "0": [
+                        "La Venta",
+                        "N"
+                    ]
+                },
+                "continent": 1
+            },
+            {
+                "position": {
+                    "x": -8,
+                    "y": -8
+                },
+                "baseTerrain": "Coast"
+            },
+            {
+                "militaryUnit": {
+                    "owner": "Barbarians",
+                    "originalOwner": "Barbarians",
+                    "name": "Brute",
+                    "currentMovement": 2,
+                    "id": 9,
+                    "movementMemories": [
+                        {
+                            "position": {
+                                "x": 8,
+                                "y": 8
+                            }
+                        },
+                        {
+                            "position": {
+                                "x": 8,
+                                "y": 8
+                            }
+                        }
+                    ]
+                },
+                "position": {
+                    "x": 8,
+                    "y": 8
+                },
+                "baseTerrain": "Tundra",
+                "terrainFeatures": [
+                    "Forest"
+                ],
+                "exploredBy": [
+                    "Barbarians",
+                    "India"
+                ],
+                "improvement": "Barbarian encampment",
+                "continent": 2
+            },
+            {
+                "position": {
+                    "x": -7,
+                    "y": -8
+                },
+                "baseTerrain": "Coast"
+            },
+            {
+                "position": {
+                    "x": 7,
+                    "y": 8
+                },
+                "baseTerrain": "Tundra",
+                "exploredBy": [
+                    "Barbarians",
+                    "India"
+                ],
+                "continent": 2
+            },
+            {
+                "position": {
+                    "x": -6,
+                    "y": -8
+                },
+                "baseTerrain": "Ocean"
+            },
+            {
+                "militaryUnit": {
+                    "owner": "India",
+                    "originalOwner": "India",
+                    "name": "Warrior",
+                    "id": 2,
+                    "action": "Explore",
+                    "movementMemories": [
+                        {
+                            "position": {
+                                "x": 4,
+                                "y": 8
+                            }
+                        },
+                        {
+                            "position": {
+                                "x": 4,
+                                "y": 8
+                            }
+                        }
+                    ]
+                },
+                "position": {
+                    "x": 6,
+                    "y": 8
+                },
+                "baseTerrain": "Tundra",
+                "terrainFeatures": [
+                    "Hill"
+                ],
+                "exploredBy": [
+                    "Barbarians",
+                    "India"
+                ],
+                "continent": 2
+            },
+            {
+                "position": {
+                    "x": -5,
+                    "y": -8
+                },
+                "baseTerrain": "Coast"
+            },
+            {
+                "position": {
+                    "x": 5,
+                    "y": 8
+                },
+                "baseTerrain": "Tundra",
+                "exploredBy": [
+                    "India"
+                ],
+                "continent": 2
+            },
+            {
+                "position": {
+                    "x": -4,
+                    "y": -8
+                },
+                "baseTerrain": "Coast"
+            },
+            {
+                "position": {
+                    "x": 4,
+                    "y": 8
+                },
+                "baseTerrain": "Tundra",
+                "exploredBy": [
+                    "India"
+                ],
+                "continent": 2
+            },
+            {
+                "position": {
+                    "x": -3,
+                    "y": -8
+                },
+                "baseTerrain": "Coast"
+            },
+            {
+                "position": {
+                    "x": 3,
+                    "y": 8
+                },
+                "baseTerrain": "Tundra",
+                "exploredBy": [
+                    "India"
+                ],
+                "resource": "Iron",
+                "resourceAmount": 2,
+                "continent": 2
+            },
+            {
+                "position": {
+                    "x": -2,
+                    "y": -8
+                },
+                "baseTerrain": "Plains",
+                "improvement": "Ancient ruins",
+                "continent": 0
+            },
+            {
+                "position": {
+                    "x": 2,
+                    "y": 8
+                },
+                "baseTerrain": "Mountain",
+                "exploredBy": [
+                    "India"
+                ]
+            },
+            {
+                "position": {
+                    "x": -1,
+                    "y": -8
+                },
+                "baseTerrain": "Desert",
+                "continent": 0
+            },
+            {
+                "position": {
+                    "x": 1,
+                    "y": 8
+                },
+                "baseTerrain": "Desert",
+                "terrainFeatures": [
+                    "Hill"
+                ],
+                "exploredBy": [
+                    "Belgrade"
+                ],
+                "continent": 2
+            },
+            {
+                "position": {
+                    "y": -8
+                },
+                "baseTerrain": "Desert",
+                "continent": 0
+            },
+            {
+                "position": {
+                    "y": 8
+                },
+                "baseTerrain": "Desert",
+                "continent": 2
+            },
+            {
+                "position": {
+                    "x": 1,
+                    "y": -7
+                },
+                "baseTerrain": "Coast",
+                "exploredBy": [
+                    "Barbarians"
+                ]
+            },
+            {
+                "position": {
+                    "x": -1,
+                    "y": 7
+                },
+                "baseTerrain": "Desert",
+                "exploredBy": [
+                    "Belgrade"
+                ],
+                "continent": 2
+            },
+            {
+                "position": {
+                    "x": 2,
+                    "y": -6
+                },
+                "baseTerrain": "Coast",
+                "exploredBy": [
+                    "Barbarians"
+                ]
+            },
+            {
+                "position": {
+                    "x": -2,
+                    "y": 6
+                },
+                "baseTerrain": "Grassland",
+                "exploredBy": [
+                    "Belgrade"
+                ],
+                "resource": "Cattle",
+                "continent": 2
+            },
+            {
+                "militaryUnit": {
+                    "owner": "Barbarians",
+                    "originalOwner": "Barbarians",
+                    "name": "Brute",
+                    "currentMovement": 2,
+                    "id": 10,
+                    "movementMemories": [
+                        {
+                            "position": {
+                                "x": 3,
+                                "y": -5
+                            }
+                        },
+                        {
+                            "position": {
+                                "x": 3,
+                                "y": -5
+                            }
+                        }
+                    ]
+                },
+                "position": {
+                    "x": 3,
+                    "y": -5
+                },
+                "baseTerrain": "Plains",
+                "terrainFeatures": [
+                    "Jungle"
+                ],
+                "exploredBy": [
+                    "Genoa",
+                    "Barbarians",
+                    "Ragusa"
+                ],
+                "improvement": "Barbarian encampment",
+                "continent": 0
+            },
+            {
+                "position": {
+                    "x": -3,
+                    "y": 5
+                },
+                "baseTerrain": "Plains",
+                "exploredBy": [
+                    "Belgrade"
+                ],
+                "continent": 2
+            },
+            {
+                "position": {
+                    "x": 4,
+                    "y": -4
+                },
+                "baseTerrain": "Grassland",
+                "exploredBy": [
+                    "Barbarians",
+                    "Ragusa"
+                ],
+                "continent": 0
+            },
+            {
+                "position": {
+                    "x": -4,
+                    "y": 4
+                },
+                "baseTerrain": "Grassland",
+                "exploredBy": [
+                    "Belgrade",
+                    "Genoa"
+                ],
+                "continent": 2
+            },
+            {
+                "position": {
+                    "x": 5,
+                    "y": -3
+                },
+                "baseTerrain": "Coast",
+                "exploredBy": [
+                    "Barbarians",
+                    "Ragusa"
+                ],
+                "roadOwner": "Ragusa",
+                "history": {
+                    "0": [
+                        "Ragusa",
+                        "N"
+                    ]
+                }
+            },
+            {
+                "position": {
+                    "x": -5,
+                    "y": 3
+                },
+                "baseTerrain": "Coast",
+                "exploredBy": [
+                    "Belgrade",
+                    "Genoa"
+                ],
+                "roadOwner": "Genoa",
+                "history": {
+                    "0": [
+                        "Genoa",
+                        "N"
+                    ]
+                }
+            },
+            {
+                "position": {
+                    "x": 6,
+                    "y": -2
+                },
+                "baseTerrain": "Grassland",
+                "exploredBy": [
+                    "Ragusa"
+                ],
+                "improvement": "City center",
+                "roadOwner": "Ragusa",
+                "history": {
+                    "0": [
+                        "Ragusa",
+                        "R"
+                    ]
+                },
+                "continent": 0
+            },
+            {
+                "position": {
+                    "x": -6,
+                    "y": 2
+                },
+                "baseTerrain": "Coast",
+                "exploredBy": [
+                    "Genoa"
+                ],
+                "roadOwner": "Genoa",
+                "history": {
+                    "0": [
+                        "Genoa",
+                        "N"
+                    ]
+                }
+            },
+            {
+                "position": {
+                    "x": 7,
+                    "y": -1
+                },
+                "baseTerrain": "Grassland",
+                "terrainFeatures": [
+                    "Jungle"
+                ],
+                "exploredBy": [
+                    "Ragusa"
+                ],
+                "resource": "Uranium",
+                "resourceAmount": 2,
+                "roadOwner": "Ragusa",
+                "history": {
+                    "0": [
+                        "Ragusa",
+                        "N"
+                    ]
+                },
+                "continent": 0
+            },
+            {
+                "position": {
+                    "x": -7,
+                    "y": 1
+                },
+                "baseTerrain": "Coast",
+                "exploredBy": [
+                    "Genoa"
+                ]
+            },
+            {
+                "position": {
+                    "x": 8
+                },
+                "baseTerrain": "Coast",
+                "exploredBy": [
+                    "Ragusa"
+                ]
+            },
+            {
+                "position": {
+                    "x": -8
+                },
+                "baseTerrain": "Desert",
+                "continent": 1
+            },
+            {
+                "position": {
+                    "x": 8,
+                    "y": 1
+                },
+                "baseTerrain": "Coast",
+                "exploredBy": [
+                    "Vatican City"
+                ]
+            },
+            {
+                "position": {
+                    "x": -8,
+                    "y": -1
+                },
+                "baseTerrain": "Coast"
+            },
+            {
+                "position": {
+                    "x": 8,
+                    "y": 2
+                },
+                "baseTerrain": "Plains",
+                "exploredBy": [
+                    "Vatican City"
+                ],
+                "continent": 2
+            },
+            {
+                "position": {
+                    "x": -8,
+                    "y": -2
+                },
+                "baseTerrain": "Mountain"
+            },
+            {
+                "civilianUnit": {
+                    "owner": "Vatican City",
+                    "originalOwner": "Vatican City",
+                    "name": "Settler",
+                    "id": 3,
+                    "movementMemories": [
+                        {
+                            "position": {
+                                "x": 10,
+                                "y": 4
+                            }
+                        },
+                        {
+                            "position": {
+                                "x": 8,
+                                "y": 3
+                            }
+                        }
+                    ]
+                },
+                "position": {
+                    "x": 8,
+                    "y": 3
+                },
+                "baseTerrain": "Grassland",
+                "terrainFeatures": [
+                    "Jungle"
+                ],
+                "exploredBy": [
+                    "Vatican City"
+                ],
+                "resource": "Silk",
+                "continent": 2
+            },
+            {
+                "position": {
+                    "x": -8,
+                    "y": -3
+                },
+                "baseTerrain": "Mountain"
+            },
+            {
+                "position": {
+                    "x": 8,
+                    "y": 4
+                },
+                "baseTerrain": "Grassland",
+                "terrainFeatures": [
+                    "Hill"
+                ],
+                "exploredBy": [
+                    "Vatican City"
+                ],
+                "resource": "Iron",
+                "resourceAmount": 6,
+                "continent": 2
+            },
+            {
+                "position": {
+                    "x": -8,
+                    "y": -4
+                },
+                "baseTerrain": "Grassland",
+                "resource": "Cattle",
+                "continent": 1
+            },
+            {
+                "position": {
+                    "x": 8,
+                    "y": 5
+                },
+                "baseTerrain": "Tundra",
+                "terrainFeatures": [
+                    "Hill"
+                ],
+                "exploredBy": [
+                    "Vatican City"
+                ],
+                "continent": 2
+            },
+            {
+                "position": {
+                    "x": -8,
+                    "y": -5
+                },
+                "baseTerrain": "Tundra",
+                "exploredBy": [
+                    "La Venta"
+                ],
+                "resource": "Stone",
+                "continent": 1
+            },
+            {
+                "position": {
+                    "x": 8,
+                    "y": 6
+                },
+                "baseTerrain": "Tundra",
+                "terrainFeatures": [
+                    "Hill",
+                    "Forest"
+                ],
+                "exploredBy": [
+                    "Vatican City",
+                    "Barbarians"
+                ],
+                "resource": "Deer",
+                "continent": 2
+            },
+            {
+                "position": {
+                    "x": -8,
+                    "y": -6
+                },
+                "baseTerrain": "Coast",
+                "terrainFeatures": [
+                    "Atoll"
+                ],
+                "exploredBy": [
+                    "La Venta"
+                ]
+            },
+            {
+                "position": {
+                    "x": 8,
+                    "y": 7
+                },
+                "baseTerrain": "Tundra",
+                "terrainFeatures": [
+                    "Forest"
+                ],
+                "exploredBy": [
+                    "Barbarians"
+                ],
+                "continent": 2
+            },
+            {
+                "position": {
+                    "x": -8,
+                    "y": -7
+                },
+                "baseTerrain": "Tundra",
+                "terrainFeatures": [
+                    "Forest"
+                ],
+                "exploredBy": [
+                    "La Venta"
+                ],
+                "resource": "Deer",
+                "continent": 1
+            },
+            {
+                "position": {
+                    "x": -9,
+                    "y": -9
+                },
+                "baseTerrain": "Ocean"
+            },
+            {
+                "position": {
+                    "x": 9,
+                    "y": 9
+                },
+                "baseTerrain": "Coast",
+                "exploredBy": [
+                    "Barbarians"
+                ]
+            },
+            {
+                "position": {
+                    "x": -8,
+                    "y": -9
+                },
+                "baseTerrain": "Coast",
+                "resource": "Fish"
+            },
+            {
+                "position": {
+                    "x": 8,
+                    "y": 9
+                },
+                "baseTerrain": "Coast",
+                "exploredBy": [
+                    "Barbarians",
+                    "India"
+                ]
+            },
+            {
+                "position": {
+                    "x": -7,
+                    "y": -9
+                },
+                "baseTerrain": "Ocean"
+            },
+            {
+                "position": {
+                    "x": 7,
+                    "y": 9
+                },
+                "baseTerrain": "Coast",
+                "exploredBy": [
+                    "Barbarians",
+                    "India"
+                ]
+            },
+            {
+                "position": {
+                    "x": -6,
+                    "y": -9
+                },
+                "baseTerrain": "Ocean"
+            },
+            {
+                "position": {
+                    "x": 6,
+                    "y": 9
+                },
+                "baseTerrain": "Tundra",
+                "exploredBy": [
+                    "India"
+                ],
+                "resource": "Deer",
+                "continent": 2
+            },
+            {
+                "position": {
+                    "x": -5,
+                    "y": -9
+                },
+                "baseTerrain": "Coast",
+                "resource": "Fish"
+            },
+            {
+                "position": {
+                    "x": 5,
+                    "y": 9
+                },
+                "baseTerrain": "Coast",
+                "exploredBy": [
+                    "India"
+                ],
+                "resource": "Fish"
+            },
+            {
+                "position": {
+                    "x": -4,
+                    "y": -9
+                },
+                "baseTerrain": "Coast",
+                "resource": "Fish"
+            },
+            {
+                "position": {
+                    "x": 4,
+                    "y": 9
+                },
+                "baseTerrain": "Tundra",
+                "terrainFeatures": [
+                    "Forest"
+                ],
+                "exploredBy": [
+                    "India"
+                ],
+                "resource": "Deer",
+                "continent": 2
+            },
+            {
+                "position": {
+                    "x": -3,
+                    "y": -9
+                },
+                "baseTerrain": "Plains",
+                "continent": 0
+            },
+            {
+                "position": {
+                    "x": 3,
+                    "y": 9
+                },
+                "baseTerrain": "Lakes",
+                "exploredBy": [
+                    "India"
+                ]
+            },
+            {
+                "position": {
+                    "x": -2,
+                    "y": -9
+                },
+                "baseTerrain": "Coast"
+            },
+            {
+                "position": {
+                    "x": 2,
+                    "y": 9
+                },
+                "baseTerrain": "Tundra",
+                "continent": 2
+            },
+            {
+                "position": {
+                    "x": -1,
+                    "y": -9
+                },
+                "baseTerrain": "Plains",
+                "terrainFeatures": [
+                    "Hill"
+                ],
+                "resource": "Iron",
+                "resourceAmount": 2,
+                "continent": 0
+            },
+            {
+                "position": {
+                    "x": 1,
+                    "y": 9
+                },
+                "baseTerrain": "Plains",
+                "terrainFeatures": [
+                    "Forest"
+                ],
+                "continent": 2
+            },
+            {
+                "position": {
+                    "y": -9
+                },
+                "baseTerrain": "Desert",
+                "terrainFeatures": [
+                    "Hill"
+                ],
+                "resource": "Sheep",
+                "continent": 0
+            },
+            {
+                "position": {
+                    "y": 9
+                },
+                "baseTerrain": "Desert",
+                "continent": 2
+            },
+            {
+                "position": {
+                    "x": 1,
+                    "y": -8
+                },
+                "baseTerrain": "Desert",
+                "continent": 0
+            },
+            {
+                "position": {
+                    "x": -1,
+                    "y": 8
+                },
+                "baseTerrain": "Desert",
+                "exploredBy": [
+                    "Belgrade"
+                ],
+                "continent": 2
+            },
+            {
+                "position": {
+                    "x": 2,
+                    "y": -7
+                },
+                "baseTerrain": "Grassland",
+                "exploredBy": [
+                    "Genoa",
+                    "Barbarians"
+                ],
+                "continent": 0
+            },
+            {
+                "position": {
+                    "x": -2,
+                    "y": 7
+                },
+                "baseTerrain": "Grassland",
+                "exploredBy": [
+                    "Belgrade"
+                ],
+                "continent": 2
+            },
+            {
+                "position": {
+                    "x": 3,
+                    "y": -6
+                },
+                "baseTerrain": "Grassland",
+                "exploredBy": [
+                    "Genoa",
+                    "Barbarians"
+                ],
+                "continent": 0
+            },
+            {
+                "position": {
+                    "x": -3,
+                    "y": 6
+                },
+                "baseTerrain": "Grassland",
+                "exploredBy": [
+                    "Belgrade"
+                ],
+                "continent": 2
+            },
+            {
+                "position": {
+                    "x": 4,
+                    "y": -5
+                },
+                "baseTerrain": "Plains",
+                "exploredBy": [
+                    "Genoa",
+                    "Barbarians"
+                ],
+                "continent": 0
+            },
+            {
+                "position": {
+                    "x": -4,
+                    "y": 5
+                },
+                "baseTerrain": "Plains",
+                "terrainFeatures": [
+                    "Jungle"
+                ],
+                "exploredBy": [
+                    "Belgrade",
+                    "Genoa",
+                    "Barbarians"
+                ],
+                "resource": "Aluminum",
+                "resourceAmount": 3,
+                "continent": 2
+            },
+            {
+                "position": {
+                    "x": 5,
+                    "y": -4
+                },
+                "baseTerrain": "Plains",
+                "exploredBy": [
+                    "Belgrade",
+                    "Barbarians",
+                    "Ragusa"
+                ],
+                "continent": 0
+            },
+            {
+                "position": {
+                    "x": -5,
+                    "y": 4
+                },
+                "baseTerrain": "Grassland",
+                "terrainFeatures": [
+                    "Jungle"
+                ],
+                "exploredBy": [
+                    "Belgrade",
+                    "Genoa",
+                    "Barbarians"
+                ],
+                "resource": "Gems",
+                "roadOwner": "Genoa",
+                "history": {
+                    "0": [
+                        "Genoa",
+                        "N"
+                    ]
+                },
+                "continent": 2
+            },
+            {
+                "position": {
+                    "x": 6,
+                    "y": -3
+                },
+                "baseTerrain": "Plains",
+                "terrainFeatures": [
+                    "Hill"
+                ],
+                "exploredBy": [
+                    "Belgrade",
+                    "Barbarians",
+                    "Ragusa"
+                ],
+                "resource": "Gold Ore",
+                "roadOwner": "Ragusa",
+                "history": {
+                    "0": [
+                        "Ragusa",
+                        "N"
+                    ]
+                },
+                "continent": 0
+            },
+            {
+                "position": {
+                    "x": -6,
+                    "y": 3
+                },
+                "baseTerrain": "Grassland",
+                "exploredBy": [
+                    "Genoa"
+                ],
+                "improvement": "City center",
+                "roadOwner": "Genoa",
+                "history": {
+                    "0": [
+                        "Genoa",
+                        "R"
+                    ]
+                },
+                "continent": 2
+            },
+            {
+                "position": {
+                    "x": 7,
+                    "y": -2
+                },
+                "baseTerrain": "Grassland",
+                "terrainFeatures": [
+                    "Jungle"
+                ],
+                "exploredBy": [
+                    "Belgrade",
+                    "Ragusa"
+                ],
+                "roadOwner": "Ragusa",
+                "history": {
+                    "0": [
+                        "Ragusa",
+                        "N"
+                    ]
+                },
+                "continent": 0
+            },
+            {
+                "position": {
+                    "x": -7,
+                    "y": 2
+                },
+                "baseTerrain": "Coast",
+                "exploredBy": [
+                    "Genoa"
+                ],
+                "resource": "Fish",
+                "roadOwner": "Genoa",
+                "history": {
+                    "0": [
+                        "Genoa",
+                        "N"
+                    ]
+                }
+            },
+            {
+                "position": {
+                    "x": 8,
+                    "y": -1
+                },
+                "baseTerrain": "Coast",
+                "exploredBy": [
+                    "Ragusa"
+                ]
+            },
+            {
+                "position": {
+                    "x": -8,
+                    "y": 1
+                },
+                "baseTerrain": "Coast",
+                "exploredBy": [
+                    "Genoa"
+                ]
+            },
+            {
+                "position": {
+                    "x": 9
+                },
+                "baseTerrain": "Coast",
+                "resource": "Fish"
+            },
+            {
+                "position": {
+                    "x": -9
+                },
+                "baseTerrain": "Desert",
+                "resource": "Stone",
+                "continent": 1
+            },
+            {
+                "position": {
+                    "x": 9,
+                    "y": 1
+                },
+                "baseTerrain": "Coast"
+            },
+            {
+                "position": {
+                    "x": -9,
+                    "y": -1
+                },
+                "baseTerrain": "Coast"
+            },
+            {
+                "position": {
+                    "x": 9,
+                    "y": 2
+                },
+                "baseTerrain": "Coast",
+                "exploredBy": [
+                    "Vatican City"
+                ]
+            },
+            {
+                "position": {
+                    "x": -9,
+                    "y": -2
+                },
+                "baseTerrain": "Mountain",
+                "naturalWonder": "Rock of Gibraltar",
+                "continent": 1
+            },
+            {
+                "position": {
+                    "x": 9,
+                    "y": 3
+                },
+                "baseTerrain": "Tundra",
+                "terrainFeatures": [
+                    "Hill"
+                ],
+                "exploredBy": [
+                    "Vatican City"
+                ],
+                "resource": "Sheep",
+                "continent": 2
+            },
+            {
+                "position": {
+                    "x": -9,
+                    "y": -3
+                },
+                "baseTerrain": "Coast",
+                "continent": 1
+            },
+            {
+                "position": {
+                    "x": 9,
+                    "y": 4
+                },
+                "baseTerrain": "Tundra",
+                "exploredBy": [
+                    "Vatican City"
+                ],
+                "resource": "Oil",
+                "resourceAmount": 3,
+                "continent": 2
+            },
+            {
+                "position": {
+                    "x": -9,
+                    "y": -4
+                },
+                "baseTerrain": "Tundra",
+                "terrainFeatures": [
+                    "Hill"
+                ],
+                "resource": "Aluminum",
+                "resourceAmount": 8,
+                "continent": 1
+            },
+            {
+                "position": {
+                    "x": 9,
+                    "y": 5
+                },
+                "baseTerrain": "Tundra",
+                "exploredBy": [
+                    "Vatican City"
+                ],
+                "continent": 2
+            },
+            {
+                "position": {
+                    "x": -9,
+                    "y": -5
+                },
+                "baseTerrain": "Snow",
+                "continent": 1
+            },
+            {
+                "position": {
+                    "x": 9,
+                    "y": 6
+                },
+                "baseTerrain": "Tundra",
+                "terrainFeatures": [
+                    "Hill"
+                ],
+                "exploredBy": [
+                    "Vatican City"
+                ],
+                "continent": 2
+            },
+            {
+                "position": {
+                    "x": -9,
+                    "y": -6
+                },
+                "baseTerrain": "Coast"
+            },
+            {
+                "position": {
+                    "x": 9,
+                    "y": 7
+                },
+                "baseTerrain": "Tundra",
+                "terrainFeatures": [
+                    "Hill"
+                ],
+                "exploredBy": [
+                    "Barbarians"
+                ],
+                "continent": 2
+            },
+            {
+                "position": {
+                    "x": -9,
+                    "y": -7
+                },
+                "baseTerrain": "Coast"
+            },
+            {
+                "position": {
+                    "x": 9,
+                    "y": 8
+                },
+                "baseTerrain": "Snow",
+                "exploredBy": [
+                    "Barbarians"
+                ],
+                "continent": 2
+            },
+            {
+                "position": {
+                    "x": -9,
+                    "y": -8
+                },
+                "baseTerrain": "Coast"
+            },
+            {
+                "position": {
+                    "x": -10,
+                    "y": -10
+                },
+                "baseTerrain": "Ocean",
+                "terrainFeatures": [
+                    "Ice"
+                ]
+            },
+            {
+                "position": {
+                    "x": 10,
+                    "y": 10
+                },
+                "baseTerrain": "Ocean",
+                "exploredBy": [
+                    "Barbarians"
+                ]
+            },
+            {
+                "position": {
+                    "x": -9,
+                    "y": -10
+                },
+                "baseTerrain": "Ocean"
+            },
+            {
+                "position": {
+                    "x": 9,
+                    "y": 10
+                },
+                "baseTerrain": "Coast",
+                "exploredBy": [
+                    "Barbarians"
+                ],
+                "resource": "Fish"
+            },
+            {
+                "position": {
+                    "x": -8,
+                    "y": -10
+                },
+                "baseTerrain": "Ocean"
+            },
+            {
+                "position": {
+                    "x": 8,
+                    "y": 10
+                },
+                "baseTerrain": "Ocean",
+                "exploredBy": [
+                    "Barbarians",
+                    "India"
+                ]
+            },
+            {
+                "position": {
+                    "x": -7,
+                    "y": -10
+                },
+                "baseTerrain": "Ocean"
+            },
+            {
+                "position": {
+                    "x": 7,
+                    "y": 10
+                },
+                "baseTerrain": "Coast",
+                "exploredBy": [
+                    "India"
+                ],
+                "resource": "Crab"
+            },
+            {
+                "position": {
+                    "x": -6,
+                    "y": -10
+                },
+                "baseTerrain": "Ocean"
+            },
+            {
+                "position": {
+                    "x": 6,
+                    "y": 10
+                },
+                "baseTerrain": "Coast",
+                "exploredBy": [
+                    "India"
+                ],
+                "resource": "Fish"
+            },
+            {
+                "position": {
+                    "x": -5,
+                    "y": -10
+                },
+                "baseTerrain": "Ocean"
+            },
+            {
+                "position": {
+                    "x": 5,
+                    "y": 10
+                },
+                "baseTerrain": "Tundra",
+                "terrainFeatures": [
+                    "Forest"
+                ],
+                "exploredBy": [
+                    "India"
+                ],
+                "resource": "Uranium",
+                "resourceAmount": 2,
+                "continent": 2
+            },
+            {
+                "position": {
+                    "x": -4,
+                    "y": -10
+                },
+                "baseTerrain": "Coast"
+            },
+            {
+                "position": {
+                    "x": 4,
+                    "y": 10
+                },
+                "baseTerrain": "Tundra",
+                "terrainFeatures": [
+                    "Forest"
+                ],
+                "exploredBy": [
+                    "India"
+                ],
+                "resource": "Deer",
+                "continent": 2
+            },
+            {
+                "position": {
+                    "x": -3,
+                    "y": -10
+                },
+                "baseTerrain": "Tundra",
+                "resource": "Deer",
+                "continent": 0
+            },
+            {
+                "position": {
+                    "x": 3,
+                    "y": 10
+                },
+                "baseTerrain": "Tundra",
+                "resource": "Stone",
+                "continent": 2
+            },
+            {
+                "position": {
+                    "x": -2,
+                    "y": -10
+                },
+                "baseTerrain": "Coast",
+                "resource": "Fish"
+            },
+            {
+                "position": {
+                    "x": 2,
+                    "y": 10
+                },
+                "baseTerrain": "Tundra",
+                "resource": "Deer",
+                "continent": 2
+            },
+            {
+                "position": {
+                    "x": -1,
+                    "y": -10
+                },
+                "baseTerrain": "Coast"
+            },
+            {
+                "position": {
+                    "x": 1,
+                    "y": 10
+                },
+                "baseTerrain": "Tundra",
+                "continent": 2
+            },
+            {
+                "position": {
+                    "y": -10
+                },
+                "baseTerrain": "Coast"
+            },
+            {
+                "position": {
+                    "x": 1,
+                    "y": -9
+                },
+                "baseTerrain": "Coast"
+            },
+            {
+                "position": {
+                    "x": 2,
+                    "y": -8
+                },
+                "baseTerrain": "Coast",
+                "exploredBy": [
+                    "Genoa"
+                ]
+            },
+            {
+                "position": {
+                    "x": 3,
+                    "y": -7
+                },
+                "baseTerrain": "Coast",
+                "exploredBy": [
+                    "Genoa",
+                    "Barbarians"
+                ],
+                "roadOwner": "Genoa",
+                "history": {
+                    "0": [
+                        "Genoa",
+                        "N"
+                    ]
+                }
+            },
+            {
+                "position": {
+                    "x": 4,
+                    "y": -6
+                },
+                "baseTerrain": "Coast",
+                "exploredBy": [
+                    "Genoa",
+                    "Barbarians"
+                ],
+                "roadOwner": "Genoa",
+                "history": {
+                    "0": [
+                        "Genoa",
+                        "N"
+                    ]
+                }
+            },
+            {
+                "position": {
+                    "x": 5,
+                    "y": -5
+                },
+                "baseTerrain": "Coast",
+                "terrainFeatures": [
+                    "Atoll"
+                ],
+                "exploredBy": [
+                    "Belgrade",
+                    "Genoa",
+                    "Barbarians"
+                ]
+            },
+            {
+                "position": {
+                    "x": 6,
+                    "y": -4
+                },
+                "baseTerrain": "Coast",
+                "exploredBy": [
+                    "Belgrade",
+                    "Ragusa"
+                ]
+            },
+            {
+                "position": {
+                    "x": 7,
+                    "y": -3
+                },
+                "baseTerrain": "Coast",
+                "exploredBy": [
+                    "Belgrade",
+                    "Ragusa"
+                ]
+            },
+            {
+                "position": {
+                    "x": 8,
+                    "y": -2
+                },
+                "baseTerrain": "Coast",
+                "exploredBy": [
+                    "Belgrade",
+                    "Ragusa"
+                ]
+            },
+            {
+                "position": {
+                    "x": 9,
+                    "y": -1
+                },
+                "baseTerrain": "Coast"
+            },
+            {
+                "position": {
+                    "x": 10
+                },
+                "baseTerrain": "Coast",
+                "resource": "Crab"
+            },
+            {
+                "position": {
+                    "x": 10,
+                    "y": 1
+                },
+                "baseTerrain": "Ocean"
+            },
+            {
+                "position": {
+                    "x": -10,
+                    "y": -1
+                },
+                "baseTerrain": "Grassland",
+                "terrainFeatures": [
+                    "Jungle"
+                ],
+                "resource": "Bananas",
+                "continent": 1
+            },
+            {
+                "position": {
+                    "x": 10,
+                    "y": 2
+                },
+                "baseTerrain": "Coast",
+                "exploredBy": [
+                    "Vatican City"
+                ],
+                "resource": "Fish"
+            },
+            {
+                "position": {
+                    "x": -10,
+                    "y": -2
+                },
+                "baseTerrain": "Coast",
+                "continent": 1
+            },
+            {
+                "position": {
+                    "x": 10,
+                    "y": 3
+                },
+                "baseTerrain": "Tundra",
+                "exploredBy": [
+                    "Vatican City"
+                ],
+                "resource": "Deer",
+                "continent": 2
+            },
+            {
+                "position": {
+                    "x": -10,
+                    "y": -3
+                },
+                "baseTerrain": "Coast",
+                "resource": "Fish"
+            },
+            {
+                "position": {
+                    "x": 10,
+                    "y": 4
+                },
+                "baseTerrain": "Snow",
+                "terrainFeatures": [
+                    "Hill"
+                ],
+                "exploredBy": [
+                    "Vatican City"
+                ],
+                "continent": 2
+            },
+            {
+                "position": {
+                    "x": -10,
+                    "y": -4
+                },
+                "baseTerrain": "Coast"
+            },
+            {
+                "position": {
+                    "x": 10,
+                    "y": 5
+                },
+                "baseTerrain": "Snow",
+                "terrainFeatures": [
+                    "Hill"
+                ],
+                "exploredBy": [
+                    "Vatican City"
+                ],
+                "continent": 2
+            },
+            {
+                "position": {
+                    "x": -10,
+                    "y": -5
+                },
+                "baseTerrain": "Coast",
+                "resource": "Fish"
+            },
+            {
+                "position": {
+                    "x": 10,
+                    "y": 6
+                },
+                "baseTerrain": "Coast",
+                "exploredBy": [
+                    "Vatican City"
+                ],
+                "resource": "Fish"
+            },
+            {
+                "position": {
+                    "x": -10,
+                    "y": -6
+                },
+                "baseTerrain": "Coast"
+            },
+            {
+                "position": {
+                    "x": 10,
+                    "y": 7
+                },
+                "baseTerrain": "Coast"
+            },
+            {
+                "position": {
+                    "x": -10,
+                    "y": -7
+                },
+                "baseTerrain": "Ocean",
+                "terrainFeatures": [
+                    "Ice"
+                ]
+            },
+            {
+                "position": {
+                    "x": 10,
+                    "y": 8
+                },
+                "baseTerrain": "Coast",
+                "exploredBy": [
+                    "Barbarians"
+                ]
+            },
+            {
+                "position": {
+                    "x": -10,
+                    "y": -8
+                },
+                "baseTerrain": "Ocean"
+            },
+            {
+                "position": {
+                    "x": 10,
+                    "y": 9
+                },
+                "baseTerrain": "Coast",
+                "exploredBy": [
+                    "Barbarians"
+                ],
+                "resource": "Fish"
+            },
+            {
+                "position": {
+                    "x": -10,
+                    "y": -9
+                },
+                "baseTerrain": "Ocean"
+            }
+        ]
+    },
+    "gameParameters": {
+        "difficulty": "Chieftain",
+        "players": [
+            {
+                "chosenCiv": "India",
+                "playerType": "Human"
+            }
+        ],
+        "espionageEnabled": true,
+        "victoryTypes": [
+            "Scientific",
+            "Cultural",
+            "Diplomatic",
+            "Time"
+        ],
+        "maxTurns": 1500
+    },
+    "turns": 1,
+    "currentPlayer": "India",
+    "currentTurnStartTime": 1777646695910,
+    "gameId": "8c1561ac-1a23-49a5-9086-72ea14834750",
+    "lastUnitId": 10,
+    "historyStartTurn": 0
+}
