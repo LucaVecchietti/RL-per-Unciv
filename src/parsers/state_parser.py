@@ -253,9 +253,13 @@ class UncivStateParser:
         entry: str = history[latest_turn]
         return {m.group(1): int(m.group(2)) for m in re.finditer(r'([A-Z])(-?\d+)', entry)}
 
-    def to_observation_vector(self, state: GameState) -> np.ndarray:
+    def to_observation_vector(
+        self,
+        state: GameState,
+        selected_unit: Optional[UnitState] = None,
+    ) -> np.ndarray:
         """
-        Converte GameState in vettore numpy (48,) float32.
+        Converte GameState in vettore numpy (52,) float32.
 
         Layout:
           [0-5]   Globale: turn, gold, happiness, science/turn, culture/turn, n_cities
@@ -265,6 +269,7 @@ class UncivStateParser:
           [30-37] Unità: n_warriors, n_settlers, n_other, warrior_xy, settler_xy, explored
           [38-45] Città 2 (zeros se assente)
           [46-47] Diplomazia: n_known_civs, at_war
+          [48-51] Unità selezionata: sel_x, sel_y, sel_movement, tiles_explored_ratio
         """
         w = float(state.map_width) or 20.0
         h = float(state.map_height) or 20.0
@@ -362,6 +367,14 @@ class UncivStateParser:
             float(state.at_war),
         ]
 
+        # --- Unità selezionata (4) — usata da per-entity rotation in Fase 2.1 ---
+        obs += [
+            np.clip(selected_unit.x / w, 0.0, 1.0) if selected_unit else 0.0,
+            np.clip(selected_unit.y / h, 0.0, 1.0) if selected_unit else 0.0,
+            np.clip(selected_unit.movement_points / 2.0, 0.0, 1.0) if selected_unit else 0.0,
+            np.clip(state.tiles_explored / total, 0.0, 1.0),
+        ]
+
         result = np.array(obs, dtype=np.float32)
-        assert result.shape == (48,), f"Expected (48,), got {result.shape}"
+        assert result.shape == (52,), f"Expected (52,), got {result.shape}"
         return result

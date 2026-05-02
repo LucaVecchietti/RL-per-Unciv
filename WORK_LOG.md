@@ -5,6 +5,60 @@
 
 ---
 
+## [2026-05-02] — Sessione 15
+
+### Obiettivo sessione
+Implementare File 10 — Fase 2.1: unità + movimento (action space Discrete(11), obs (52,), per-entity rotation, MaskablePPO action_masks).
+
+### File modificati
+- `requirements.txt` (modificato — aggiunto `sb3-contrib>=2.0.0`)
+- `config/default_config.yaml` (modificato — aggiunta sezione `reward.exploration: 0.3`)
+- `CLAUDE.md` (modificato — contratti: obs `(48,)`→`(52,)`, azioni `7`→`11`)
+- `src/parsers/state_parser.py` (modificato — `to_observation_vector` esteso a `(52,)` con param `selected_unit`)
+- `tests/test_parser.py` (modificato — shape assert `(48,)` → `(52,)`)
+- `src/envs/unciv_env.py` (riscritto — `Discrete(11)`, per-entity rotation, `action_masks()`, `_apply_movement()`, `_advance_game_turn()`, `_get_obs()`)
+- `tests/test_env.py` (riscritto — shape `(52,)`, n=11, +6 nuovi test per rotation e masks)
+- `src/utils/reward.py` (modificato — aggiunto `exploration: 0.3` weight + componente reward #7)
+- `tests/test_reward.py` (modificato — aggiunto `test_exploration_reward`)
+- `WORK_LOG.md` (questo aggiornamento)
+
+### Fatto
+
+**state_parser.py:**
+- `to_observation_vector` accetta `selected_unit: Optional[UnitState] = None`
+- Aggiunge campi `[48-51]`: sel_x, sel_y, sel_movement (normalizzato /2.0), tiles_explored_ratio
+- Shape `(48,)` → `(52,)`, assert aggiornato
+
+**unciv_env.py — Fase 2.1:**
+- `ACTION_MAP` esteso: azioni 7-10 = MOVE_NORTH/SOUTH/EAST/WEST
+- `observation_space` shape `(52,)`, `action_space = Discrete(11)`
+- `action_masks()`: azioni 0-6 valide in city step, 6+7-10 valide in unit step
+- Per-entity rotation in `step()`:
+  - City step: applica costruzione → se warriors con MP>0 → transition to unit step (reward=0) o advance turn
+  - Unit step: applica movimento → se altri warriors → resto unit step (reward=0) o advance turn
+  - `_buffered_city_action` traccia azione città per reward calculation
+- `_advance_game_turn()`: metodo privato che concentra advance_turn + parse + reward + info
+- `_get_obs()`: seleziona `selected_unit` da `_pending_warriors[_unit_rotation_index]` se in unit step
+- `_apply_movement()`: sposta warrior nel JSON (tile swap su tileList)
+- `_apply_action()`: guard `if action >= 7: return` per sicurezza
+
+**reward.py:**
+- `REWARD_WEIGHTS["exploration"] = 0.3`
+- Componente #7: `explored_delta * weights["exploration"]` se `> 0`
+
+### Test
+- [x] 60/60 test verdi: `python -m pytest tests/ -v`
+- Nuovi test: `test_action_masks_city_step`, `test_action_masks_unit_step`, `test_per_entity_rotation_transitions_to_unit_step`, `test_per_entity_rotation_advances_turn_after_warrior`, `test_obs_contains_selected_unit_coords`, `test_exploration_reward`
+
+### TODO prossima sessione
+1. **Installare sb3-contrib:** `pip install sb3-contrib>=2.0.0`
+2. **Aggiornare train.py:** sostituire `PPO` con `MaskablePPO` da `sb3_contrib`, passare `action_masks` a `predict` e al training
+3. **Test training Fase 2.1:** `python train.py` — verificare nessun crash, monitorare `ep_rew_mean` e `unciv/exploration`
+4. **Criterio successo Fase 2.1:** agente costruisce ≥1 Warrior entro turno 50, esplora >30% mappa, `ep_rew_mean > 5.0`
+5. **Se training stabile:** procedere a Fase 2.2 (multi-città, Settler, FoundCity)
+
+---
+
 ## [2026-05-02] — Sessione 14
 
 ### Obiettivo sessione

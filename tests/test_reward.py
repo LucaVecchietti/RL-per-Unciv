@@ -84,6 +84,18 @@ def test_terminal_reward_negative_happiness():
     assert r < 0.0
 
 
+def test_exploration_reward():
+    from src.parsers.state_parser import GameState, CityState
+    prev = GameState(10, "India", 200, 5,
+        [CityState("Rome", 3, "Monument", [], 200, 0)],
+        ["Agriculture"], "Writing", 20, 20, tiles_explored=10, total_tiles=100)
+    curr = GameState(11, "India", 200, 5,
+        [CityState("Rome", 3, "Monument", [], 200, 0)],
+        ["Agriculture"], "Writing", 20, 20, tiles_explored=15, total_tiles=100)
+    reward = compute_reward(prev, curr, action=0)
+    assert reward > 0.0  # 5 nuove tile * 0.3 = +1.5
+
+
 def test_return_type_float():
     prev = make_state()
     curr = make_state()

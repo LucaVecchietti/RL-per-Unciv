@@ -24,3 +24,6 @@ unciv:
   java_path: "C:/Program Files/Eclipse Adoptium/jdk-25.0.3.9-hotspot/bin/java.exe"
   headless_timeout: 60            # secondi max per turno (JVM startup ~5s)
   saves_prefix: "current_game"    # prefisso save files paralleli
+
+reward:
+  exploration: 0.3                # reward per nuova tile esplorata

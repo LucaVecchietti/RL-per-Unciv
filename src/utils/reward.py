@@ -11,6 +11,7 @@ REWARD_WEIGHTS = {
     "gold_accumulation":  0.5,
     "happiness_penalty":  0.1,
     "idle_penalty":       0.05,
+    "exploration":        0.3,
 }
 
 
@@ -64,6 +65,11 @@ def compute_reward(
     # --- 6. Penalty azione idle (fine turno senza fare nulla) ---
     if action == 6:
         reward -= w["idle_penalty"]
+
+    # --- 7. Exploration reward (Fase 2.1) ---
+    explored_delta = curr.tiles_explored - prev.tiles_explored
+    if explored_delta > 0:
+        reward += explored_delta * w["exploration"]
 
     return float(reward)
 
