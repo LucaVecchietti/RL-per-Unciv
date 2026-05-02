@@ -5,6 +5,38 @@
 
 ---
 
+## [2026-05-02] — Sessione 20
+
+### Obiettivo sessione
+Pianificazione Fase 2.2 — scrittura spec files per i prossimi 3 step implementativi.
+
+### File modificati
+- `md_file_x_claude_code/16_fase2_2a_ruleset_reader.md` (creato)
+- `md_file_x_claude_code/17_fase2_2b_dynamic_masking.md` (creato)
+- `md_file_x_claude_code/18_fase2_2c_expanded_actions.md` (creato)
+- `WORK_LOG.md` (questo aggiornamento)
+
+### Fatto
+- Verificato parsing ruleset dal JAR (JSONC con commenti + trailing commas)
+- Path confermati: `jsons/Civ V - Vanilla/Buildings.json`, `Units.json`, `Techs.json`
+- Identificati 9 edifici + 5 unità rilevanti Ancient+Classical
+- Definita strategia: ACTION_MAP generato a runtime dal JAR, no hardcoding
+- Split in 3 step per alleggerire ogni sessione:
+  - **16**: `ruleset_reader.py` — lettura JAR, filtro era, dataclass `ConstructionInfo`
+  - **17**: masking dinamico — `action_masks()` basato su tech + built_buildings (action space invariato)
+  - **18**: action space espanso — Discrete(~19), obs (~57,), 9 flag edifici
+
+### Test
+- N/A — sessione documentazione
+
+### TODO prossima sessione
+1. Implementare File 16 (`src/utils/ruleset_reader.py` + `tests/test_ruleset_reader.py`)
+2. Poi File 17 (dynamic masking)
+3. Poi File 18 (expanded actions + obs)
+4. Riavviare training dopo File 18 (checkpoint incompatibili con nuovo obs shape)
+
+---
+
 ## [2026-05-02] — Sessione 19
 
 ### Obiettivo sessione
