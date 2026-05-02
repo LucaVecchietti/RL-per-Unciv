@@ -5,6 +5,55 @@
 
 ---
 
+## [2026-05-02] — Sessione 17
+
+### Obiettivo sessione
+Aggiornare documentazione (ARCHITECTURE.md, COMMANDS.md, CLAUDE.md) allo stato Fase 2.1.
+
+### File modificati
+- `ARCHITECTURE.md` (modificato — riscritto per Fase 2.1)
+- `COMMANDS.md` (modificato — aggiornato per Fase 2.1)
+- `CLAUDE.md` (modificato — fix contratto stale UncivSimulator → UncivHeadless)
+- `WORK_LOG.md` (questo aggiornamento)
+
+### Fatto
+
+**ARCHITECTURE.md:**
+- Diagramma visione d'insieme: `PPO` → `MaskablePPO`, aggiunto Unciv fork JAR
+- Flusso step: per-entity rotation completo (city step → unit step → advance turn)
+- Obs layout aggiornato: `(7,)` → `(52,)` con tutti i 52 campi documentati
+- Spazi Gymnasium: `Discrete(7)/(7,)` → `Discrete(11)/(52,)` + `action_masks()` doc
+- Componenti: aggiornate tutte le firme e contratti, aggiunto `headless.py`, `_apply_movement`, `_get_obs`, `action_masks`
+- Reward: aggiunta componente #7 exploration (`+explored_delta * 0.3`)
+- `train.py` section: `MaskablePPO` + `ActionMasker` + `MaskableEvalCallback`, n_steps 1024
+- File su disco: `unciv_mppo_*`, `fase2_1_final_model.zip`, `MaskablePPO_1/`
+- Dipendenze: aggiunto `sb3_contrib`, rimosso `simulator.py` da dipendenze training
+- Metriche TensorBoard: aggiornate con `unciv/action_Warrior` e `unciv/action_MOVE_*`
+
+**COMMANDS.md:**
+- Verifica save file: obs shape `(7,)` → `(52,)`
+- Training: checkpoint names `unciv_ppo_*` → `unciv_mppo_*`, warning compatibilità
+- Nuova sezione: diagnostica masking (`env.env_method("action_masks")`)
+- Test: aggiunto `test_headless.py`
+- Struttura output: `unciv_mppo_*`, `fase2_1_final_model.zip`, `MaskablePPO_1/`
+- Tabella config: `n_steps` 2048→1024, `total_timesteps` 1M→500k, aggiunto `ent_coef`, `reward.exploration`, `unciv.java_path`, `unciv.headless_timeout`
+
+**CLAUDE.md:**
+- Fix contratto critico: `UncivSimulator in _advance_turn` → `UncivHeadless in _advance_turn`
+
+### Test
+- N/A — sessione documentazione, nessuna modifica al codice
+
+### TODO prossima sessione
+1. **Avviare training Fase 2.1:** `.venv\Scripts\python train.py`
+2. **Monitorare TensorBoard:** `tensorboard --logdir logs`
+   - `unciv/action_MOVE_*` deve salire entro 50k step
+   - `unciv/action_Warrior` deve salire
+   - `ep_rew_mean` target > 5.0 entro 500k step
+3. **Se ep_rew_mean > 5.0** → Fase 2.1 completata → procedere Fase 2.2
+
+---
+
 ## [2026-05-02] — Sessione 16
 
 ### Obiettivo sessione
