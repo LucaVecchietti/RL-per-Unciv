@@ -156,8 +156,8 @@ class UncivEnv(gym.Env):
             print(f"Turn {s.turn} | Gold: {s.gold:.0f} | Happiness: {s.happiness:.0f} | Cities: {len(s.cities)}")
 
     def close(self) -> None:
-        """Cleanup risorse."""
-        pass
+        """Cleanup risorse — spegne il processo JVM persistente."""
+        self.headless.close()
 
     # ------------------------------------------------------------------
     # Metodi privati

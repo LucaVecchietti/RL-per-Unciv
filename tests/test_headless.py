@@ -1,5 +1,6 @@
 import pytest
 import subprocess
+import threading
 from unittest.mock import patch, MagicMock
 from pathlib import Path
 from src.utils.headless import UncivHeadless
@@ -11,6 +12,22 @@ def headless(tmp_path):
     jar = tmp_path / "Unciv.jar"
     jar.write_bytes(b"fake jar")
     return UncivHeadless(jar_path=str(jar), timeout=5)
+
+
+def _make_popen_mock(responses: list[str]) -> MagicMock:
+    """
+    Create a mock Popen that returns READY on startup then the given responses.
+    Each string in responses is returned as a full line (newline appended).
+    """
+    all_lines = ["READY\n"] + [r + "\n" for r in responses]
+    line_iter = iter(all_lines)
+
+    mock_proc = MagicMock()
+    mock_proc.poll.return_value = None  # process alive
+    mock_proc.stdout.readline.side_effect = lambda: next(line_iter, "")
+    mock_proc.stdin = MagicMock()
+    mock_proc.stderr.read.return_value = ""
+    return mock_proc
 
 
 def test_jar_not_found_raises():
@@ -27,18 +44,19 @@ def test_advance_turn_success(headless, tmp_path):
     save = tmp_path / "game.json"
     save.write_text('{"turns": 2}')
 
-    with patch("subprocess.run") as mock_run:
-        mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
+    mock_proc = _make_popen_mock(["ok 3"])
+    with patch("subprocess.Popen", return_value=mock_proc):
         headless.advance_turn(save)
-        mock_run.assert_called_once()
+    mock_proc.stdin.write.assert_called()
+    mock_proc.stdin.flush.assert_called()
 
 
 def test_advance_turn_failure(headless, tmp_path):
     save = tmp_path / "game.json"
     save.write_text('{"turns": 2}')
 
-    with patch("subprocess.run") as mock_run:
-        mock_run.return_value = MagicMock(returncode=1, stdout="", stderr="error")
+    mock_proc = _make_popen_mock(["error something went wrong"])
+    with patch("subprocess.Popen", return_value=mock_proc):
         with pytest.raises(RuntimeError):
             headless.advance_turn(save)
 
@@ -47,9 +65,27 @@ def test_advance_turn_timeout(headless, tmp_path):
     save = tmp_path / "game.json"
     save.write_text('{"turns": 2}')
 
-    with patch("subprocess.run", side_effect=subprocess.TimeoutExpired("java", 5)):
+    # Short-timeout headless instance
+    headless_fast = UncivHeadless(jar_path=str(headless.jar_path), timeout=1)
+
+    call_count = [0]
+
+    def slow_readline():
+        call_count[0] += 1
+        if call_count[0] == 1:
+            return "READY\n"
+        threading.Event().wait()  # block forever → simulates timeout
+        return ""
+
+    mock_proc = MagicMock()
+    mock_proc.poll.return_value = None
+    mock_proc.stdout.readline.side_effect = slow_readline
+    mock_proc.stdin = MagicMock()
+    mock_proc.stderr.read.return_value = ""
+
+    with patch("subprocess.Popen", return_value=mock_proc):
         with pytest.raises(TimeoutError):
-            headless.advance_turn(save)
+            headless_fast.advance_turn(save)
 
 
 def test_start_new_game(headless, tmp_path):
@@ -82,3 +118,32 @@ def test_is_available_true(headless):
 def test_is_available_java_not_found(headless):
     with patch("subprocess.run", side_effect=FileNotFoundError):
         assert headless.is_available() is False
+
+
+def test_close_sends_quit(headless):
+    mock_proc = MagicMock()
+    mock_proc.poll.return_value = None
+    headless._process = mock_proc
+
+    headless.close()
+
+    mock_proc.stdin.write.assert_called_with("quit\n")
+    assert headless._process is None
+
+
+def test_close_noop_when_no_process(headless):
+    headless._process = None
+    headless.close()  # must not raise
+
+
+def test_reuse_process_across_calls(headless, tmp_path):
+    """JVM process started once and reused for multiple advance_turn calls."""
+    save = tmp_path / "game.json"
+    save.write_text('{"turns": 2}')
+
+    mock_proc = _make_popen_mock(["ok 3", "ok 4"])
+
+    with patch("subprocess.Popen", return_value=mock_proc) as mock_popen:
+        headless.advance_turn(save)
+        headless.advance_turn(save)
+        mock_popen.assert_called_once()

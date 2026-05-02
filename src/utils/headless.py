@@ -1,78 +1,127 @@
 import subprocess
 import shutil
+import threading
 from pathlib import Path
+from typing import Optional
 
 
 class UncivHeadless:
     """
-    Gestisce l'esecuzione di Unciv in modalità headless.
-    Isola tutta la logica subprocess in un unico modulo testabile.
+    Manages Unciv headless execution via a persistent JVM server process.
+
+    One process per UncivHeadless instance (one per env_rank). The JVM starts
+    once on the first advance_turn() call, then handles all subsequent calls
+    via a stdin/stdout command protocol — eliminating ~5s JVM startup per turn.
+
+    Protocol:
+        Python → JVM:  "advance <path>\\n" | "quit\\n"
+        JVM → Python:  "READY\\n" (on startup) | "ok <turn>\\n" | "error <msg>\\n"
     """
 
     def __init__(self, jar_path: str, timeout: int = 60, java_path: str = "java") -> None:
         self.jar_path = Path(jar_path)
         self.timeout = timeout
         self.java_path = java_path
+        self._process: Optional[subprocess.Popen] = None
+        self._lock = threading.Lock()
         self._validate_jar()
 
     def _validate_jar(self) -> None:
-        """Verifica che il JAR esista prima di procedere."""
+        """Verify JAR exists before proceeding."""
         if not self.jar_path.exists():
             raise FileNotFoundError(
                 f"Unciv.jar non trovato in: {self.jar_path}\n"
                 f"Scaricalo da: https://github.com/yairm210/Unciv/releases/latest"
             )
 
+    def _readline_timeout(self, stream, timeout: int) -> Optional[str]:
+        """Read one line from stream with timeout. Returns None on timeout."""
+        result: list[Optional[str]] = [None]
+
+        def _read() -> None:
+            result[0] = stream.readline()
+
+        t = threading.Thread(target=_read, daemon=True)
+        t.start()
+        t.join(timeout)
+        return result[0]
+
+    def _ensure_running(self) -> None:
+        """Start persistent JVM server process if not running or dead."""
+        if self._process is not None and self._process.poll() is None:
+            return
+
+        self._process = subprocess.Popen(
+            [self.java_path, "-jar", str(self.jar_path), "--server"],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            bufsize=1,
+        )
+        ready_line = self._readline_timeout(self._process.stdout, self.timeout)
+        if ready_line is None or ready_line.strip() != "READY":
+            stderr_snippet = ""
+            try:
+                self._process.terminate()
+                stderr_snippet = self._process.stderr.read(500)
+            except Exception:
+                pass
+            self._process = None
+            raise RuntimeError(
+                f"JVM server non pronto. Got: {ready_line!r}\nstderr: {stderr_snippet}"
+            )
+
     def advance_turn(self, save_path: Path) -> None:
         """
-        Avanza di un turno eseguendo Unciv headless sul save file indicato.
+        Advance one game turn via the persistent JVM server process.
 
         Args:
-            save_path: Path al file JSON di salvataggio da aggiornare.
+            save_path: Path to the JSON save file to update in-place.
 
         Raises:
-            FileNotFoundError: Se save_path non esiste.
-            TimeoutError: Se il turno supera self.timeout secondi.
-            RuntimeError: Se Unciv headless termina con errore.
+            FileNotFoundError: If save_path doesn't exist.
+            TimeoutError: If JVM server doesn't respond within self.timeout seconds.
+            RuntimeError: If JVM server reports an error or returns unexpected response.
         """
         save_path = Path(save_path)
         if not save_path.exists():
             raise FileNotFoundError(f"Save file non trovato: {save_path}")
 
-        try:
-            result = subprocess.run(
-                [
-                    self.java_path, "-jar", str(self.jar_path),
-                    "--advance-turn",
-                    "--save-file", str(save_path),
-                ],
-                capture_output=True,
-                text=True,
-                timeout=self.timeout,
-            )
-        except subprocess.TimeoutExpired:
-            raise TimeoutError(
-                f"Unciv headless timeout dopo {self.timeout}s "
-                f"su file: {save_path}"
-            )
+        with self._lock:
+            self._ensure_running()
 
-        if result.returncode != 0 or "ERROR:" in result.stderr:
-            raise RuntimeError(
-                f"Unciv headless fallito (returncode={result.returncode})\n"
-                f"stdout: {result.stdout[:500]}\n"
-                f"stderr: {result.stderr[:500]}"
-            )
+            self._process.stdin.write(f"advance {save_path.as_posix()}\n")
+            self._process.stdin.flush()
+
+            response = self._readline_timeout(self._process.stdout, self.timeout)
+
+            if response is None:
+                try:
+                    self._process.terminate()
+                except Exception:
+                    pass
+                self._process = None
+                raise TimeoutError(
+                    f"JVM server timeout dopo {self.timeout}s su: {save_path}"
+                )
+
+            response = response.strip()
+            if response.startswith("error "):
+                raise RuntimeError(f"Unciv headless errore: {response[6:]}")
+            if not response.startswith("ok "):
+                raise RuntimeError(f"Risposta JVM inattesa: {response!r}")
 
     def start_new_game(self, template_path: Path, dest_path: Path) -> None:
         """
-        Crea una nuova partita copiando il template.
+        Copy template to create a new game save.
 
         Args:
-            template_path: Save file template da copiare.
-            dest_path: Destinazione del nuovo save file.
+            template_path: Source template save file.
+            dest_path: Destination for the new save file.
 
         Raises:
-            FileNotFoundError: Se template_path non esiste.
+            FileNotFoundError: If template_path doesn't exist.
         """
         template_path = Path(template_path)
         dest_path = Path(dest_path)
@@ -85,7 +134,7 @@ class UncivHeadless:
         shutil.copy(template_path, dest_path)
 
     def is_available(self) -> bool:
-        """Controlla se Java e Unciv.jar sono disponibili."""
+        """Check if Java and Unciv.jar are available."""
         try:
             result = subprocess.run(
                 [self.java_path, "-version"],
@@ -95,3 +144,17 @@ class UncivHeadless:
             return result.returncode == 0 and self.jar_path.exists()
         except (subprocess.TimeoutExpired, FileNotFoundError):
             return False
+
+    def close(self) -> None:
+        """Shut down the persistent JVM server process gracefully."""
+        if self._process is not None and self._process.poll() is None:
+            try:
+                self._process.stdin.write("quit\n")
+                self._process.stdin.flush()
+                self._process.wait(timeout=5)
+            except Exception:
+                try:
+                    self._process.terminate()
+                except Exception:
+                    pass
+        self._process = None

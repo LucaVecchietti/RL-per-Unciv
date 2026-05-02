@@ -15,10 +15,11 @@
 │                                   │  saves/             │           │
 │                                   │  current_game_N.json│           │
 │                                   └─────────┬──────────┘           │
-│                                             │ java -jar            │
+│                                             │ stdin/stdout         │
 │                                   ┌─────────▼──────────┐           │
 │                                   │  Unciv fork JAR    │           │
-│                                   │  (headless)        │           │
+│                                   │  (--server mode)   │           │
+│                                   │  1 JVM per env     │           │
 │                                   └────────────────────┘           │
 └─────────────────────────────────────────────────────────────────────┘
 ```
@@ -65,9 +66,9 @@ UncivEnv.step(action)
                  │
                  ├─► _advance_turn()
                  │       └─► UncivHeadless.advance_turn(save_path)
-                 │               └─► java -jar unciv/Unciv.jar
-                 │                   --advance-turn --save-file <path>
-                 │                   (fork custom con CLI headless)
+                 │               └─► stdin: "advance <path>\n" → JVM server
+                 │                   stdout: "ok <turn>\n"      ← (1 JVM per env)
+                 │                   ~50ms/turno (vs ~5s spawn)
                  │
                  ├─► parser.parse(save_path)
                  │       └─► UncivStateParser
@@ -165,7 +166,7 @@ action_masks():
 | `_apply_action()` | `step()` city | Scrive costruzione nel JSON (azioni 0-5) |
 | `_apply_movement()` | `step()` unit | Sposta warrior nel JSON (tile swap) |
 | `_advance_game_turn()` | `step()` | Advance turn + parse + reward + return |
-| `_advance_turn()` | `_advance_game_turn()` | Chiama UncivHeadless subprocess |
+| `_advance_turn()` | `_advance_game_turn()` | Invia comando al server JVM persistente |
 | `_get_obs()` | `step()`, `reset()` | obs con selected_unit se in unit step |
 | `_compute_reward()` | `_advance_game_turn()` | Delega a `src/utils/reward.py` |
 | `_is_terminated()` | `_advance_game_turn()` | `happiness < -10` |
@@ -205,11 +206,27 @@ compute_terminal_reward(state, max_turns) → float
 
 ### `src/utils/headless.py`
 
+**Architettura: persistent JVM server** (Fase 2.2+)
+
+Un processo JVM per `UncivHeadless` instance (= uno per env_rank). Il JVM parte una
+sola volta al primo `advance_turn()` e rimane vivo per tutto l'episodio.
+
+**Protocollo stdin/stdout:**
+```
+Python → JVM:  "advance <path>\n"  |  "quit\n"
+JVM → Python:  "READY\n" (startup) |  "ok <turn>\n"  |  "error <msg>\n"
+```
+
 | Metodo | Cosa fa |
 |---|---|
-| `advance_turn(save_path)` | `java -jar Unciv.jar --advance-turn --save-file <path>` |
+| `advance_turn(save_path)` | Invia `advance <path>` al server JVM, attende `ok N` |
 | `start_new_game(template, save_path)` | Copia template in save_path |
 | `is_available()` | Verifica JAR e java raggiungibili |
+| `close()` | Invia `quit`, attende terminazione JVM |
+| `_ensure_running()` | Avvia il processo se non in vita (Popen `--server`) |
+| `_readline_timeout(stream, t)` | Legge riga da stream con timeout (thread daemon) |
+
+**Costo per turno:** ~50ms (vs ~5s prima — JVM avviato una sola volta)
 
 **Config necessaria:**
 ```yaml

@@ -5,6 +5,67 @@
 
 ---
 
+## [2026-05-02] — Sessione 18
+
+### Obiettivo sessione
+Eliminare bottleneck JVM: ~5s/turno per spawn nuovo processo → training impraticabile
+(~5.7 ore per primo log). Fix: modalità server JVM persistente.
+
+### File modificati
+- `unciv/Unciv/desktop/src/com/unciv/app/desktop/DesktopLauncher.kt` (modificato — aggiunto `--server` mode)
+- `src/utils/headless.py` (riscritto — `subprocess.Popen` + persistent process + `close()`)
+- `src/envs/unciv_env.py` (modificato — `close()` ora chiama `headless.close()`)
+- `tests/test_headless.py` (riscritto — mock `subprocess.Popen`, 13 test inclusi `close` e `reuse_process`)
+- `unciv/Unciv.jar` (ricompilato — include `--server` mode)
+- `ARCHITECTURE.md` (modificato — sezione headless.py aggiornata, diagramma flusso)
+- `WORK_LOG.md` (questo aggiornamento)
+
+### Fatto
+
+**Problema root cause:**
+- Ogni `advance_turn()` lanciava `subprocess.run([java, -jar, Unciv.jar, --advance-turn, ...])` → ~5s JVM startup
+- Con `n_envs=4`, `n_steps=1024`: 4096 advance_turn prima del primo log SB3 → ~5.7 ore
+
+**Soluzione: modalità `--server` in DesktopLauncher.kt**
+- JVM avvia `HeadlessApplication`, carica rulesets, stampa `READY\n` su stdout
+- Poi entra in loop su stdin: comandi `advance <path>` o `quit`
+- Per `advance`: chiama `nextTurn()`, salva JSON, stampa `ok <turn>\n`
+- `System.out.flush()` esplicito dopo ogni risposta
+- Due `CountDownLatch`: `initLatch` (segnala dopo READY), `doneLatch` (segnala dopo quit)
+- Main thread: aspetta `initLatch` → aspetta `doneLatch` → `exitProcess(0)`
+
+**Refactoring `src/utils/headless.py`**
+- `subprocess.Popen` con `stdin/stdout/stderr=PIPE, text=True, bufsize=1`
+- `_ensure_running()`: avvia processo se morto o None, legge `READY` con timeout
+- `_readline_timeout(stream, t)`: thread daemon + `t.join(timeout)` per timeout su `readline()`
+- `advance_turn()`: `stdin.write(f"advance {path}\n")`, `stdin.flush()`, legge risposta
+- `close()`: `stdin.write("quit\n")`, `wait(5)`, terminate su fallback
+- Lock threading per thread-safety (safety net, DummyVecEnv è single-thread)
+
+**Costo atteso per turno:** ~50ms vs ~5s (stima −99% overhead headless)
+
+**Verifica smoke-test:**
+```
+echo "advance saves/template_game.json\nquit" | java -jar unciv/Unciv.jar --server
+→ READY
+→ ok 5
+```
+
+### Test
+- [x] 63/63 test verdi: `python -m pytest tests/ -v`
+- [x] `test_headless.py`: 13 test (inclusi `test_close_sends_quit`, `test_reuse_process_across_calls`, `test_advance_turn_timeout`)
+
+### TODO prossima sessione
+1. **Avviare training:** `.venv\Scripts\python train.py`
+2. **Verificare velocità:** primo log SB3 dovrebbe arrivare entro ~5 minuti (non 5.7 ore)
+3. **Monitorare TensorBoard:** `tensorboard --logdir logs`
+   - `unciv/action_MOVE_*` deve salire entro 50k step
+   - `ep_rew_mean` target > 5.0 entro 500k step
+4. **Se training crash:** controllare stderr JVM process (headless_timeout troppo basso?)
+
+
+---
+
 ## [2026-05-02] — Sessione 17
 
 ### Obiettivo sessione
