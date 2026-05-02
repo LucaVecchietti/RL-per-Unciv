@@ -251,6 +251,8 @@ class UncivEnv(gym.Env):
             "gold": self._current_state.gold,
             "happiness": self._current_state.happiness,
             "n_cities": len(self._current_state.cities),
+            "n_techs": len(self._current_state.techs_researched),
+            "population": sum(c.population for c in self._current_state.cities),
         }
         return obs, reward, terminated, truncated, info
 

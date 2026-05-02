@@ -5,7 +5,7 @@ from stable_baselines3.common.callbacks import BaseCallback
 class UncivMetricsCallback(BaseCallback):
     """
     Logga metriche custom di Unciv su TensorBoard ad ogni rollout.
-    Legge gold, happiness, n_cities, turn dall'info dict di ogni episodio.
+    Legge gold, happiness, n_cities, turn, n_techs, population dall'info dict.
     """
 
     def __init__(self, verbose: int = 0) -> None:
@@ -24,44 +24,45 @@ class UncivMetricsCallback(BaseCallback):
         if not self._episode_infos:
             return
 
-        gold_values = [i.get("gold", 0) for i in self._episode_infos]
-        happiness_values = [i.get("happiness", 0) for i in self._episode_infos]
-        cities_values = [i.get("n_cities", 0) for i in self._episode_infos]
-        turn_values = [i.get("turn", 0) for i in self._episode_infos]
-
-        self.logger.record("unciv/gold_mean", np.mean(gold_values))
-        self.logger.record("unciv/happiness_mean", np.mean(happiness_values))
-        self.logger.record("unciv/cities_mean", np.mean(cities_values))
-        self.logger.record("unciv/turns_mean", np.mean(turn_values))
+        self.logger.record("unciv/gold_mean",       np.mean([i.get("gold", 0)       for i in self._episode_infos]))
+        self.logger.record("unciv/happiness_mean",  np.mean([i.get("happiness", 0)  for i in self._episode_infos]))
+        self.logger.record("unciv/cities_mean",     np.mean([i.get("n_cities", 0)   for i in self._episode_infos]))
+        self.logger.record("unciv/turns_mean",      np.mean([i.get("turn", 0)       for i in self._episode_infos]))
+        self.logger.record("unciv/techs_mean",      np.mean([i.get("n_techs", 0)    for i in self._episode_infos]))
+        self.logger.record("unciv/population_mean", np.mean([i.get("population", 0) for i in self._episode_infos]))
 
         self._episode_infos.clear()
 
 
+# Fase 2.1 — 11 azioni: 0-6 costruzione + 7-10 movimento warrior
+_ACTION_NAMES = [
+    "Monument", "Granary", "Library", "Barracks", "Settler", "Warrior", "Idle",
+    "MOVE_NORTH", "MOVE_SOUTH", "MOVE_EAST", "MOVE_WEST",
+]
+
+
 class ActionDistributionCallback(BaseCallback):
     """
-    Logga la distribuzione delle azioni per diagnosticare
-    comportamenti degeneri (es. agente che sceglie sempre la stessa azione).
+    Logga la distribuzione delle azioni per diagnosticare comportamenti degeneri.
+    Aggiornato per Fase 2.1: 11 azioni (0-10), include MOVE_*.
     """
-
-    ACTION_NAMES = ["Monument", "Granary", "Library", "Barracks", "Settler", "Warrior", "Idle"]
 
     def __init__(self, log_freq: int = 10_000, verbose: int = 0) -> None:
         super().__init__(verbose)
         self.log_freq = log_freq
-        self._action_counts = np.zeros(7, dtype=int)
+        self._action_counts = np.zeros(len(_ACTION_NAMES), dtype=int)
 
     def _on_step(self) -> bool:
-        """Conta le azioni eseguite e logga la distribuzione ogni log_freq step."""
+        """Conta azioni eseguite e logga distribuzione ogni log_freq step."""
         actions = self.locals.get("actions", [])
         for a in actions:
-            if 0 <= a < 7:
+            if 0 <= a < len(_ACTION_NAMES):
                 self._action_counts[a] += 1
 
         if self.num_timesteps % self.log_freq == 0 and self._action_counts.sum() > 0:
             total = self._action_counts.sum()
-            for i, name in enumerate(self.ACTION_NAMES):
-                freq = self._action_counts[i] / total
-                self.logger.record(f"unciv/action_{name}", freq)
+            for i, name in enumerate(_ACTION_NAMES):
+                self.logger.record(f"unciv/action_{name}", self._action_counts[i] / total)
             self._action_counts[:] = 0
 
         return True
