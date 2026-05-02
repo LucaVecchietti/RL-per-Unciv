@@ -4,11 +4,10 @@ from pathlib import Path
 from typing import Optional
 import yaml
 import json
-import shutil
 
 from src.parsers.state_parser import UncivStateParser, GameState
 from src.utils.reward import compute_reward, compute_terminal_reward
-from src.utils.simulator import UncivSimulator
+from src.utils.headless import UncivHeadless
 
 # Mappa azione → nome costruzione Unciv
 ACTION_MAP = {
@@ -40,10 +39,18 @@ class UncivEnv(gym.Env):
         self.render_mode = render_mode
         self.config = self._load_config(config_path)
         self.parser = UncivStateParser(player_civ="India")
-        self.simulator = UncivSimulator()
         self.env_rank = env_rank
-        self.save_path = Path(self.config["paths"]["unciv_saves"]) / f"current_game_{env_rank}.json"
+
+        saves_dir = Path(self.config["paths"]["unciv_saves"])
+        unciv_cfg = self.config.get("unciv", {})
+        prefix = unciv_cfg.get("saves_prefix", "current_game")
+        self.save_path = saves_dir / f"{prefix}_{env_rank}.json"
+        self.template_path = saves_dir / "template_game.json"
         self.max_turns = self.config["environment"]["max_turns"]
+
+        jar_path = unciv_cfg.get("jar_path", "unciv/Unciv.jar")
+        timeout = unciv_cfg.get("headless_timeout", 30)
+        self.headless = UncivHeadless(jar_path=jar_path, timeout=timeout)
 
         # Spazi standard Gymnasium
         self.observation_space = gym.spaces.Box(
@@ -125,17 +132,8 @@ class UncivEnv(gym.Env):
             return yaml.safe_load(f)
 
     def _start_new_game(self) -> None:
-        """
-        STUB — Fase 1: copia un save file template nella cartella saves/.
-        Fase 2+: avvierà Unciv headless per generare una nuova partita.
-        """
-        template_path = Path("saves/template_game.json")
-        if not template_path.exists():
-            raise FileNotFoundError(
-                "Save template non trovato in saves/template_game.json\n"
-                "Genera una partita manuale con Unciv e copiala lì."
-            )
-        shutil.copy(template_path, self.save_path)
+        """Crea nuova partita copiando il template via UncivHeadless."""
+        self.headless.start_new_game(self.template_path, self.save_path)
 
     def _apply_action(self, action: int) -> None:
         """
@@ -160,15 +158,8 @@ class UncivEnv(gym.Env):
             json.dump(raw, f)
 
     def _advance_turn(self) -> None:
-        """
-        Fase 1.5: micro-simulatore Python.
-        Fase 2 (file 08): sostituire con self.headless.advance_turn(self.save_path).
-        """
-        with open(self.save_path, 'r') as f:
-            raw = json.load(f)
-        raw = self.simulator.advance_turn(raw)
-        with open(self.save_path, 'w') as f:
-            json.dump(raw, f)
+        """Fase 2.0: avanza turno via Unciv headless."""
+        self.headless.advance_turn(self.save_path)
 
     def _compute_reward(self, prev: Optional[GameState], curr: GameState, action: int) -> float:
         """Delega a src/utils/reward.compute_reward."""

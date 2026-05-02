@@ -5,6 +5,45 @@
 
 ---
 
+## [2026-05-02] — Sessione 11
+
+### Obiettivo sessione
+Implementare File 08 — headless integration (Fase 2.0).
+
+### File modificati
+- `src/utils/headless.py` (creato — UncivHeadless: advance_turn, start_new_game, is_available)
+- `tests/test_headless.py` (creato — 10 test TDD con mock subprocess)
+- `src/envs/unciv_env.py` (modificato — import headless, __init__ con template_path + UncivHeadless, _start_new_game, _advance_turn)
+- `config/default_config.yaml` (modificato — sezione unciv: jar_path, headless_timeout, saves_prefix)
+- `WORK_LOG.md` (questo aggiornamento)
+
+### Fatto
+- Creato `UncivHeadless` con logica subprocess isolata e mockabile
+- `_advance_turn` ora delega a `self.headless.advance_turn(self.save_path)`
+- `_start_new_game` ora delega a `self.headless.start_new_game(template_path, save_path)`
+- Rimosso `UncivSimulator` da `unciv_env.py` — non più usato
+- `self.template_path` aggiunto in `__init__` da config `paths.unciv_saves`
+- Tutte le costanti in config: `jar_path`, `headless_timeout`, `saves_prefix`
+- Training Fase 1.5 analizzato: reward 34.5 → 37.5 a 500k step, modello salvato come `fase1_5_final_model.zip`
+
+### Problemi incontrati
+- Java non visibile dalla sandbox PowerShell (PATH limitato) — nessun impatto: user ha Java in PATH nel proprio terminale (`C:\ProgramData\Oracle\Java\javapath\java.exe`)
+- `shutil` rimasto come import orfano dopo refactoring — rimosso
+
+### Test
+- [x] Tutti i test passano
+- [x] Comando eseguito: `.venv\Scripts\python -m pytest tests/ -v`
+- Output: `54 passed in 6.87s`
+
+### TODO prossima sessione
+1. **Verificare headless manuale:** `! java -jar unciv/Unciv.jar headless` dal terminale — verificare che Unciv supporti il flag e gli argomenti `--save-file --advance-turn`
+2. Se headless funziona: avviare training con `python train.py` e monitorare TensorBoard
+3. Se headless non supporta quegli argomenti: investigare API reale Unciv headless e aggiornare `headless.py`
+4. Verificare che il template `saves/template_game.json` sia corretto per Unciv headless (potrebbe servire formato diverso dal template JSON per simulatore)
+5. Quando training headless stabile: procedere a File 09 (Fase 2.1 — unit movement)
+
+---
+
 ## [2026-05-01] — Sessione 10
 
 ### Obiettivo sessione

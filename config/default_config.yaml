@@ -18,3 +18,8 @@ paths:
   save_dir: "models/checkpoints"
   log_dir: "logs"
   unciv_saves: "saves"
+
+unciv:
+  jar_path: "unciv/Unciv.jar"
+  headless_timeout: 30            # secondi max per turno
+  saves_prefix: "current_game"    # prefisso save files paralleli
