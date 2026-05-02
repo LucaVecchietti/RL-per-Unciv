@@ -1,13 +1,11 @@
 import yaml
 import argparse
 from pathlib import Path
-from stable_baselines3 import PPO
+from sb3_contrib import MaskablePPO
+from sb3_contrib.common.wrappers import ActionMasker
+from sb3_contrib.common.maskable.callbacks import MaskableEvalCallback
 from stable_baselines3.common.vec_env import DummyVecEnv
-from stable_baselines3.common.callbacks import (
-    CheckpointCallback,
-    EvalCallback,
-    CallbackList,
-)
+from stable_baselines3.common.callbacks import CheckpointCallback, CallbackList
 from stable_baselines3.common.monitor import Monitor
 from src.envs.unciv_env import UncivEnv
 from src.utils.callbacks import UncivMetricsCallback, ActionDistributionCallback
@@ -21,47 +19,46 @@ def load_config(path: str) -> dict:
 
 def make_env(config_path: str, rank: int = 0):
     """
-    Factory function per make_vec_env.
+    Factory function per DummyVecEnv.
+    ActionMasker espone action_masks() a MaskablePPO tramite env_method.
     Ogni env riceve rank univoco → save file separato → no race condition.
     """
     def _init():
         env = UncivEnv(config_path=config_path, env_rank=rank)
+        env = ActionMasker(env, lambda e: e.action_masks())
         return Monitor(env)
     return _init
 
 
 def train(config_path: str = "config/default_config.yaml", resume: str = None) -> None:
     """
-    Avvia o riprende il training PPO.
+    Avvia o riprende il training MaskablePPO (Fase 2.1+).
 
     Args:
         config_path: Path al file YAML di configurazione.
         resume: Path a checkpoint .zip da cui riprendere (None = da zero).
+
+    Note: checkpoint PPO (Fase 1.5) non sono compatibili con MaskablePPO.
     """
     config = load_config(config_path)
     tc = config["training"]
     paths = config["paths"]
 
-    # Crea cartelle output
     Path(paths["save_dir"]).mkdir(parents=True, exist_ok=True)
     Path(paths["log_dir"]).mkdir(parents=True, exist_ok=True)
 
-    # Crea ambienti vettorizzati (paralleli) — rank univoco per save file separati
     n_envs = tc["n_envs"]
     env = DummyVecEnv([make_env(config_path, rank=i) for i in range(n_envs)])
-
-    # Eval env usa rank=n_envs per non sovrapporsi ai training env
     eval_env = DummyVecEnv([make_env(config_path, rank=n_envs)])
 
-    # Callbacks
     checkpoint_cb = CheckpointCallback(
         save_freq=max(10_000 // tc["n_envs"], 1),
         save_path=paths["save_dir"],
-        name_prefix="unciv_ppo",
+        name_prefix="unciv_mppo",
         verbose=1,
     )
 
-    eval_cb = EvalCallback(
+    eval_cb = MaskableEvalCallback(
         eval_env,
         best_model_save_path=paths["save_dir"] + "/best",
         log_path=paths["log_dir"],
@@ -76,13 +73,12 @@ def train(config_path: str = "config/default_config.yaml", resume: str = None) -
 
     callbacks = CallbackList([checkpoint_cb, eval_cb, metrics_cb, action_cb])
 
-    # Crea o carica modello
     if resume:
         print(f"Riprendendo training da: {resume}")
-        model = PPO.load(resume, env=env, tensorboard_log=paths["log_dir"])
+        model = MaskablePPO.load(resume, env=env, tensorboard_log=paths["log_dir"])
     else:
-        print("Nuovo training da zero")
-        model = PPO(
+        print("Nuovo training Fase 2.1 da zero")
+        model = MaskablePPO(
             policy="MlpPolicy",
             env=env,
             learning_rate=tc["learning_rate"],
@@ -96,15 +92,13 @@ def train(config_path: str = "config/default_config.yaml", resume: str = None) -
             tensorboard_log=paths["log_dir"],
         )
 
-    # Avvia training
     model.learn(
         total_timesteps=tc["total_timesteps"],
         callback=callbacks,
         reset_num_timesteps=not bool(resume),
     )
 
-    # Salva modello finale
-    final_path = Path(paths["save_dir"]) / "final_model"
+    final_path = Path(paths["save_dir"]) / "fase2_1_final_model"
     model.save(final_path)
     print(f"Training completato. Modello salvato in: {final_path}.zip")
 
@@ -113,7 +107,7 @@ def train(config_path: str = "config/default_config.yaml", resume: str = None) -
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Train PPO agent for Unciv")
+    parser = argparse.ArgumentParser(description="Train MaskablePPO agent for Unciv")
     parser.add_argument("--config", default="config/default_config.yaml")
     parser.add_argument("--resume", default=None, help="Path a checkpoint .zip da cui riprendere")
     args = parser.parse_args()

@@ -5,6 +5,51 @@
 
 ---
 
+## [2026-05-02] — Sessione 16
+
+### Obiettivo sessione
+File 15 — Migrare `train.py` ed `evaluate.py` da `PPO` a `MaskablePPO` (sb3-contrib).
+
+### File modificati
+- `train.py` (modificato — `MaskablePPO`, `ActionMasker`, `MaskableEvalCallback`, checkpoint prefix `unciv_mppo`)
+- `evaluate.py` (modificato — `MaskablePPO`, `env.action_masks()` + `action_masks=masks` in `predict`)
+- `WORK_LOG.md` (questo aggiornamento)
+
+### Fatto
+
+**Installazione:**
+- `sb3-contrib 2.8.0` installato nel venv
+
+**train.py:**
+- Import: `MaskablePPO` da `sb3_contrib`, `ActionMasker`, `MaskableEvalCallback`
+- `make_env`: aggiunto `ActionMasker(env, lambda e: e.action_masks())` tra `UncivEnv` e `Monitor`
+- `train()`: `MaskablePPO(...)` invece di `PPO(...)`, checkpoint prefix `unciv_mppo`
+- `EvalCallback` → `MaskableEvalCallback` (stessa firma, gestisce masks in eval)
+- Modello finale salvato come `fase2_1_final_model.zip`
+
+**evaluate.py:**
+- `MaskablePPO.load(model_path)` invece di `PPO.load`
+- Loop valutazione: `masks = env.action_masks()` + `model.predict(obs, action_masks=masks)`
+
+**Verifica masking a runtime:**
+- `env.env_method("action_masks")` su `DummyVecEnv([Monitor(ActionMasker(UncivEnv))])` → masks corrette
+- City step: `[True]*7 + [False]*4` ✓
+
+### Test
+- [x] 60/60 test verdi: `python -m pytest tests/ -v` (nessuna modifica ai test necessaria)
+- `test_train_module_imports` e `test_evaluate_module_imports` verdi senza modifiche
+
+### TODO prossima sessione
+1. **Avviare training Fase 2.1:** `python train.py`
+2. **Monitorare TensorBoard:** `tensorboard --logdir logs`
+   - `unciv/action_MOVE_*` deve salire entro 50k step (conferma masking funzionante)
+   - `unciv/action_Warrior` deve salire (agente costruisce warrior)
+   - `ep_rew_mean` target > 5.0 entro 500k step
+3. **Se masking non funziona** (action_MOVE sempre 0): diagnostica con script verifica in File 15
+4. **Se ep_rew_mean > 5.0** e warrior costruito regolarmente → Fase 2.1 completata → procedere Fase 2.2
+
+---
+
 ## [2026-05-02] — Sessione 15
 
 ### Obiettivo sessione
