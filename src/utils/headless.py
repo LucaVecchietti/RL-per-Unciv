@@ -9,9 +9,10 @@ class UncivHeadless:
     Isola tutta la logica subprocess in un unico modulo testabile.
     """
 
-    def __init__(self, jar_path: str, timeout: int = 30) -> None:
+    def __init__(self, jar_path: str, timeout: int = 60, java_path: str = "java") -> None:
         self.jar_path = Path(jar_path)
         self.timeout = timeout
+        self.java_path = java_path
         self._validate_jar()
 
     def _validate_jar(self) -> None:
@@ -41,10 +42,9 @@ class UncivHeadless:
         try:
             result = subprocess.run(
                 [
-                    "java", "-jar", str(self.jar_path),
-                    "headless",
-                    "--save-file", str(save_path),
+                    self.java_path, "-jar", str(self.jar_path),
                     "--advance-turn",
+                    "--save-file", str(save_path),
                 ],
                 capture_output=True,
                 text=True,
@@ -56,7 +56,7 @@ class UncivHeadless:
                 f"su file: {save_path}"
             )
 
-        if result.returncode != 0:
+        if result.returncode != 0 or "ERROR:" in result.stderr:
             raise RuntimeError(
                 f"Unciv headless fallito (returncode={result.returncode})\n"
                 f"stdout: {result.stdout[:500]}\n"
@@ -88,7 +88,7 @@ class UncivHeadless:
         """Controlla se Java e Unciv.jar sono disponibili."""
         try:
             result = subprocess.run(
-                ["java", "-version"],
+                [self.java_path, "-version"],
                 capture_output=True,
                 timeout=5,
             )

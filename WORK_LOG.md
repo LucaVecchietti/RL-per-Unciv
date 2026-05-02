@@ -5,6 +5,64 @@
 
 ---
 
+## [2026-05-02] — Sessione 13
+
+### Obiettivo sessione
+Implementare File 08 — Fork Unciv + headless CLI `--advance-turn`.
+
+### File modificati
+- `unciv/Unciv/desktop/src/com/unciv/app/desktop/DesktopLauncher.kt` (modificato — aggiunto ramo `--advance-turn` con HeadlessApplication + CountDownLatch)
+- `unciv/Unciv/build.gradle.kts` (modificato — aggiunto `gdx-backend-headless` a dipendenze desktop)
+- `unciv/Unciv/gradle/wrapper/gradle-wrapper.properties` (modificato — Gradle 8.11.1 → 8.14)
+- `unciv/Unciv/desktop/build/libs/Unciv.jar` (non in git — JAR custom buildato)
+- `unciv/Unciv.jar` (non in git — copia JAR custom per uso Python)
+- `src/utils/headless.py` (modificato — java_path configurabile, args corretti `--advance-turn --save-file`)
+- `src/envs/unciv_env.py` (modificato — passa java_path a UncivHeadless, timeout default 60s)
+- `config/default_config.yaml` (modificato — aggiunto java_path, headless_timeout: 60)
+- `WORK_LOG.md` (questo aggiornamento)
+
+### Fatto
+
+**Kotlin fork di Unciv:**
+- Aggiunto ramo `--advance-turn --save-file <path>` in `DesktopLauncher.main()`
+- Usa `HeadlessApplication` (non consoleMode) per leggere jsons da dentro il JAR
+- `CountDownLatch` sincronizza main thread con HeadlessApplication thread
+- `UncivFiles.gameInfoFromString()` + `gameInfo.nextTurn()` + `UncivFiles.gameInfoToString()` — tutto companion object
+- Output: `TURN_ADVANCED:<n>` su stdout, exit code 0 su successo
+
+**Problemi risolti:**
+- Gradle 8.11.1 + JDK 25 → `IllegalArgumentException: 25.0.3` in Kotlin parser
+  - Fix: installato JDK 21 via winget (`EclipseAdoptium.Temurin.21.JDK`)
+  - Build con JDK 21, runtime con JDK 25 (entrambi funzionano)
+  - Gradle upgradato a 8.14 (non necessario ma rimasto)
+- `MissingModsException: Civ V - Gods & Kings` — consoleMode usa filesystem, non JAR
+  - Fix: HeadlessApplication inizializza `Gdx.files` → `loadRulesets(consoleMode=false)` legge da JAR
+  - Aggiunto `gdx-backend-headless` alle dipendenze desktop
+- HeadlessApplication non-blocking → `exitProcess(0)` killava processo prima di `create()`
+  - Fix: `CountDownLatch(1)` — main thread attende `create()` poi chiama `exitProcess`
+
+**Test manuale:**
+- Turno 1 → 2 → 3 verificati manualmente con `TURN_ADVANCED:X` su stdout
+- Exit code 0
+
+**Python:**
+- `headless.py`: `java_path` configurabile, subprocess args corretti
+- `unciv_env.py`: legge `java_path` da config, default `"java"`
+- `config.yaml`: `java_path` = percorso JDK 25
+
+### Test
+- [x] 54 test Python verdi: `python -m pytest tests/ -v`
+- [x] Test manuale headless: `TURN_ADVANCED:2`, `TURN_ADVANCED:3`
+
+### TODO prossima sessione
+1. **Implementare File 09 (obs (48,)):** aggiornare `state_parser.py` per leggere campi reali dal save JSON
+   - Step 1: stampare chiavi JSON da save file reale per trovare path corretti
+   - Step 2-12: aggiornare parser, env, test
+2. **Aggiornare contratti CLAUDE.md:** obs shape `(7,)` → `(48,)` quando File 09 completato
+3. **Test training con Unciv reale:** `python train.py` — verificare nessun crash, reward cresce
+
+---
+
 ## [2026-05-02] — Sessione 12
 
 ### Obiettivo sessione

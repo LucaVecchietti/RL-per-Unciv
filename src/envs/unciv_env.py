@@ -49,8 +49,9 @@ class UncivEnv(gym.Env):
         self.max_turns = self.config["environment"]["max_turns"]
 
         jar_path = unciv_cfg.get("jar_path", "unciv/Unciv.jar")
-        timeout = unciv_cfg.get("headless_timeout", 30)
-        self.headless = UncivHeadless(jar_path=jar_path, timeout=timeout)
+        timeout = unciv_cfg.get("headless_timeout", 60)
+        java_path = unciv_cfg.get("java_path", "java")
+        self.headless = UncivHeadless(jar_path=jar_path, timeout=timeout, java_path=java_path)
 
         # Spazi standard Gymnasium
         self.observation_space = gym.spaces.Box(
