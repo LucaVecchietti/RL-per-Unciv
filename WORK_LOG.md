@@ -5,6 +5,55 @@
 
 ---
 
+## [2026-05-02] — Sessione 12
+
+### Obiettivo sessione
+Verifica headless Unciv + pivot architettura verso agente competitivo + riscrittura spec 08-10.
+
+### File modificati
+- `md_file_x_claude_code/08_headless_integration.md` (riscritto — piano fork Unciv con CLI --advance-turn)
+- `md_file_x_claude_code/09_real_obs_space.md` (creato — obs (48,) reale da save Unciv)
+- `md_file_x_claude_code/09_unit_movement.md` (deprecato — sostituito da 09_real_obs_space)
+- `md_file_x_claude_code/10_competitive_roadmap.md` (creato — roadmap fasi 2.1→2.2→3→4→play)
+- `WORK_LOG.md` (questo aggiornamento)
+
+### Fatto
+
+**Scoperta critica — headless non funziona come previsto:**
+- `java -jar Unciv.jar headless` avvia server multiplayer, non advance-turn
+- Flag `--save-file --advance-turn` non esistono in Unciv ufficiale
+- Verificato manualmente: il processo si avvia ma rimane in attesa (server mode)
+- Unico progetto RL esistente (CivAgent) usa multiplayer HTTP — troppo lento per training
+
+**Decisione architetturale:**
+- Obiettivo finale: agente competitivo contro umani in partite multiplayer reali
+- Soluzione: fork Unciv (open source Kotlin), aggiungere CLI --advance-turn in DesktopLauncher.kt
+- Training: Unciv fork headless (~1k step/min, meccaniche reali)
+- Play mode: HTTP server Python riceve richieste da Unciv multiplayer
+
+**Spec riscritte:**
+- File 08: fork Unciv — clone → leggi sorgente → scrivi Kotlin → build → test
+- File 09: obs (48,) reale — tile yields, unit positions, tech progress, diplomazia
+- File 10: roadmap completa — Fasi 2.1 (unità), 2.2 (multi-città), 3.0 (combat), 4.0 (self-play), Play (HTTP)
+
+### Problemi incontrati
+- Java non in PATH della sandbox PowerShell — usare percorso completo `C:\Program Files\Eclipse Adoptium\jdk-25.0.3.9-hotspot\bin\java.exe`
+- `headless.py` implementato in Sessione 11 usa API che non esistono — da aggiornare quando fork pronto
+
+### Test
+- N/A — sessione di diagnostica e pianificazione, nessuna modifica al codice
+
+### TODO prossima sessione
+1. **Clonare Unciv:** `git clone https://github.com/yairm210/Unciv.git unciv-src`
+2. **Leggere DesktopLauncher.kt** — trovare API esatte: `loadGameFromFile`, `nextTurn`, `saveGame`
+3. **Scrivere Kotlin** per ramo `--advance-turn` in DesktopLauncher.kt
+4. **Build custom JAR:** `.\gradlew desktop:dist` (prima build ~10-15 min)
+5. **Test manuale:** `java -jar unciv\Unciv.jar --advance-turn --save-file saves\template_game.json`
+6. **Aggiornare headless.py:** aggiungere `java_path` configurabile
+7. **Aggiornare config.yaml:** aggiungere `java_path` e `headless_timeout: 60`
+
+---
+
 ## [2026-05-02] — Sessione 11
 
 ### Obiettivo sessione
