@@ -20,7 +20,7 @@ def env(tmp_path):
 
 
 def test_spaces(env):
-    assert env.observation_space.shape == (7,)
+    assert env.observation_space.shape == (48,)
     assert env.action_space.n == 7
 
 
@@ -60,6 +60,6 @@ def test_step_output_shape(env):
         mock_parse.return_value = mock_state
         env._current_state = mock_state
         obs, reward, term, trunc, info = env.step(0)
-        assert obs.shape == (7,)
+        assert obs.shape == (48,)
         assert isinstance(reward, float)
         assert isinstance(term, bool)

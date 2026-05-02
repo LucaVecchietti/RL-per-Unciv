@@ -4,30 +4,38 @@ import tempfile
 from pathlib import Path
 from src.parsers.state_parser import UncivStateParser
 
-# Stato minimale di test
+# Stato minimale di test — formato reale Unciv save JSON
 MOCK_SAVE = {
     "turns": 10,
     "currentPlayer": "India",
     "civilizations": [{
         "civName": "India",
         "gold": 200,
-        "happiness": 5,
+        "statsHistory": {"10": "S30N5C10P8G20T7F28H8W1A0"},
         "cities": [{
             "name": "Rome",
-            "population": {"population": 3},
+            "population": {"population": 3, "foodStored": 12},
             "cityConstructions": {
-                "currentConstruction": "Monument",
+                "constructionQueue": ["Monument"],
+                "inProgressConstructions": {"Monument": 30},
                 "builtBuildings": ["Granary"]
             },
             "health": 200,
-            "tiles": []
+            "tiles": ["a", "b", "c"],
+            "workedTiles": ["a", "b"],
+            "location": {"x": 5, "y": 7}
         }],
         "tech": {
             "techsResearched": ["Agriculture", "Mining"],
-            "currentTechnology": "Writing"
-        }
+            "techsInProgress": {"Writing": 20}
+        },
+        "diplomacy": {},
+        "proximity": {}
     }],
-    "tileMap": {"mapParameters": {"mapSize": {"width": 20, "height": 20}}}
+    "tileMap": {
+        "mapParameters": {"mapSize": {"width": 20, "height": 20}},
+        "tileList": []
+    }
 }
 
 def test_parse_basic():
@@ -54,5 +62,5 @@ def test_observation_vector_shape():
         map_width=20, map_height=20
     )
     obs = parser.to_observation_vector(mock_state)
-    assert obs.shape == (7,)
+    assert obs.shape == (48,)
     assert obs.dtype.name == "float32"

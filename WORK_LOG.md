@@ -5,6 +5,49 @@
 
 ---
 
+## [2026-05-02] — Sessione 14
+
+### Obiettivo sessione
+Implementare File 09 — obs space reale `(48,)` da JSON save Unciv.
+
+### File modificati
+- `src/parsers/state_parser.py` (riscritto — obs vector `(48,)`, parsing reale da JSON)
+- `src/envs/unciv_env.py` (modificato — `observation_space` shape `(7,)` → `(48,)`)
+- `tests/test_parser.py` (modificato — MOCK_SAVE formato reale, assert `(7,)` → `(48,)`)
+- `tests/test_env.py` (modificato — assert `(7,)` → `(48,)` in `test_spaces` e `test_step_output_shape`)
+- `CLAUDE.md` (modificato — contratto obs vector `(7,)` → `(48,)`)
+- `WORK_LOG.md` (questo aggiornamento)
+
+### Fatto
+
+**state_parser.py completo riscrittura:**
+- Aggiunto `_TECH_COSTS` e `_CONSTRUCTION_COSTS` per normalizzazione costi
+- `UnitState` dataclass: name, x, y, movement_points, health
+- `CityState` aggiornato: +food_stored, food_threshold, production_stored, current_construction_cost, tiles_worked, x, y
+- `GameState` aggiornato: +units, tiles_explored, total_tiles, science_per_turn, culture_per_turn, current_tech_progress, current_tech_cost, n_known_civs, at_war, gold_per_turn
+- `_parse_stats_history()`: regex `r'([A-Z])(-?\d+)'` su stringa compressa `S44N1C2P5H8...`
+- `_parse_units()`: scan tileList per owner==player_civ
+- `_extract_game_state()`: usa `techsInProgress` per current_tech, `statsHistory` per happiness/science/culture, `proximity` per n_known_civs
+- `_parse_city()`: usa `constructionQueue[0]`, `inProgressConstructions`, `population.population`, `workedTiles`, `location`
+- `to_observation_vector()`: vettore `(48,)` float32 — Global(6)+City1(16)+Tech(8)+Units(8)+City2(8)+Diplomacy(2)
+
+**Adattamenti da ispezione JSON reale:**
+- `statsForNextTurn` non esiste → `statsHistory` con parsing regex
+- `tech.currentTechnology` non esiste → `next(iter(techsInProgress), None)`
+- `cityConstructions.currentConstruction` non esiste → `constructionQueue[0]`
+- `cityStats` sempre vuoto → stats/turno default 0.0 (calcolati a runtime)
+- Popolazione: `population.population` default 1 se assente (Unciv non salva se =1)
+
+### Test
+- [x] 54/54 test verdi: `python -m pytest tests/ -v`
+
+### TODO prossima sessione
+1. **File 10 — Training reale:** avviare `python train.py` con Unciv headless vero
+2. Verificare che `to_observation_vector` funzioni su save file reale (stampare obs da save esistente)
+3. Eventuale tuning reward function basato su segnali reali
+
+---
+
 ## [2026-05-02] — Sessione 13
 
 ### Obiettivo sessione

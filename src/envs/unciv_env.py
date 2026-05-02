@@ -55,7 +55,7 @@ class UncivEnv(gym.Env):
 
         # Spazi standard Gymnasium
         self.observation_space = gym.spaces.Box(
-            low=0.0, high=1.0, shape=(7,), dtype=np.float32
+            low=0.0, high=1.0, shape=(48,), dtype=np.float32
         )
         self.action_space = gym.spaces.Discrete(len(ACTION_MAP))
 
