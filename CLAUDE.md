@@ -52,7 +52,7 @@ unciv-rl-agent/
 | Numero azioni | `11` (Discrete) | `unciv_env.py` ↔ `train.py` |
 | Nome civilizzazione default | `"India"` | `state_parser.py`, `unciv_env.py` |
 | Save file per env | `saves/current_game_{rank}.json` | `unciv_env.py` ↔ `train.py` |
-| Simulatore attivo | `UncivSimulator` in `_advance_turn` | `simulator.py` ↔ `unciv_env.py` |
+| Advance turn | `UncivHeadless` in `_advance_turn` | `headless.py` ↔ `unciv_env.py` |
 
 > ⚠️ Se modifichi uno di questi valori, aggiorna **tutti** i file coinvolti e la tabella qui sopra.
 

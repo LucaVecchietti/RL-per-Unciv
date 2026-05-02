@@ -1,106 +1,138 @@
-﻿# ARCHITECTURE.md — Schema di funzionamento
+# ARCHITECTURE.md — Schema di funzionamento
 
 ## Visione d'insieme
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                        TRAINING LOOP                            │
-│                                                                 │
-│   ┌──────────┐    azione     ┌──────────────┐   obs, reward    │
-│   │  PPO     │ ──────────► │  UncivEnv    │ ──────────────►  │
-│   │  Agent   │              │  (Gymnasium) │                   │
-│   │  (SB3)   │ ◄──────────  └──────┬───────┘                   │
-│   └──────────┘  obs, reward        │                           │
-│                                    │ legge/scrive              │
-│                          ┌─────────▼──────────┐                │
-│                          │  saves/             │                │
-│                          │  current_game.json  │                │
-│                          └─────────────────────┘                │
-└─────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────┐
+│                         TRAINING LOOP                               │
+│                                                                     │
+│   ┌──────────────┐  azione (0-10)  ┌──────────────────┐            │
+│   │ MaskablePPO  │ ──────────────► │   UncivEnv       │            │
+│   │  (sb3-contrib│                 │   (Gymnasium)    │            │
+│   │  ActionMasker│ ◄────────────── └────────┬─────────┘            │
+│   └──────────────┘  obs(52,)+masks          │ legge/scrive         │
+│                                   ┌─────────▼──────────┐           │
+│                                   │  saves/             │           │
+│                                   │  current_game_N.json│           │
+│                                   └─────────┬──────────┘           │
+│                                             │ java -jar            │
+│                                   ┌─────────▼──────────┐           │
+│                                   │  Unciv fork JAR    │           │
+│                                   │  (headless)        │           │
+│                                   └────────────────────┘           │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Flusso dettagliato — un singolo step
+## Flusso dettagliato — un game turn (Fase 2.1)
+
+Un game turn Unciv = N step Python (per-entity rotation):
 
 ```
-PPO sceglie azione (0-6)
+MaskablePPO sceglie azione con action_masks()
          │
          ▼
 UncivEnv.step(action)
          │
-         ├─► _apply_action(action)
+         ├─ [CITY STEP] _step_type == "city"
          │       │
-         │       └─► ACTION_MAP[action] → nome costruzione
-         │               │
-         │               └─► legge current_game.json
-         │                   modifica cityConstructions
-         │                   scrive current_game.json
-         │
-         ├─► _advance_turn()
+         │       ├─► _apply_action(action)      ← azioni 0-6 costruzione
+         │       │       └─► scrive costruzione in JSON
          │       │
-         │       └─► legge current_game_{rank}.json
-         │           UncivSimulator.advance_turn(raw)
-         │               ├─► produzione: 3 + max(0, pop-1) prod/turno
-         │               │   completamento → builtBuildings, reset accumulatore
-         │               ├─► popolazione: food += 2(+2 Granary)
-         │               │   threshold = 10 + pop*3 → crescita
-         │               ├─► scienza: 2(+2 Library) + int(pop*0.5)
-         │               │   tech completata → next_tech da TECH_TREE
-         │               ├─► oro: +1 per città
-         │               └─► happiness: 9.0 + Monument(+1) - max(0,(pop-1)*0.5)
-         │           scrive current_game_{rank}.json
-         │
-         ├─► parser.parse(save_path)
+         │       ├─► cerca warriors con movement_points > 0
          │       │
-         │       └─► UncivStateParser.load()
-         │               │ plain JSON o gzip
-         │               ▼
-         │           _find_player_civ(raw)
-         │               │ cerca civName == "India"
-         │               ▼
-         │           _extract_game_state(raw)
-         │               │
-         │               ├─► turn, gold, happiness, current_player
-         │               ├─► techs_researched, current_tech
-         │               ├─► map_width, map_height
-         │               └─► [_parse_city(c) for c in cities]
-         │                       │
-         │                       └─► CityState(name, population,
-         │                                     current_construction,
-         │                                     built_buildings,
-         │                                     health, tiles_count)
-         │           restituisce GameState
-         │
-         ├─► parser.to_observation_vector(state)
+         │       ├─► se warriors trovati:
+         │       │       _step_type = "unit"
+         │       │       return (obs, reward=0, False, False, info)
+         │       │       ← NO advance_turn ancora
          │       │
-         │       └─► vettore numpy (7,) float32:
-         │               [0] turn / 500
-         │               [1] gold / 1000
-         │               [2] happiness / 20
-         │               [3] len(cities) / 10
-         │               [4] len(techs) / 80
-         │               [5] cities[0].population / 20
-         │               [6] len(cities[0].built_buildings) / 20
+         │       └─► se nessun warrior: → _advance_game_turn()
          │
-         ├─► compute_reward(prev_state, curr_state, action)
+         ├─ [UNIT STEP] _step_type == "unit"
          │       │
-         │       ├─► +pop_delta * 2.0          (crescita città)
-         │       ├─► +new_buildings * 1.5      (edifici completati)
-         │       ├─► +new_techs * 3.0          (ricerca tecnologica)
-         │       ├─► +clip(gold_delta/100, ±0.5) (gestione oro)
-         │       ├─► happiness < 0 → +happiness * 0.1  (penalty)
-         │       └─► action == 6 → -0.05       (penalty idle)
+         │       ├─► _apply_movement(action, unit)  ← azioni 6 skip, 7-10 movimento
+         │       │       └─► sposta warrior nel JSON (tile swap)
+         │       │
+         │       ├─► unit_rotation_index += 1
+         │       │
+         │       ├─► se altri warriors da muovere:
+         │       │       return (obs, reward=0, False, False, info)
+         │       │
+         │       └─► tutti decisi: _step_type = "city" → _advance_game_turn()
          │
-         ├─► _is_terminated()
-         │       └─► happiness < -10 → True
-         │
-         ├─► se terminated:
-         │       └─► compute_terminal_reward(state, max_turns)
-         │               ├─► +1.0 se happiness >= 0 (survival bonus)
-         │               └─► +techs*0.1 + population*0.05
-         │
-         └─► return (obs, reward, terminated, truncated, info)
+         └─ _advance_game_turn()
+                 │
+                 ├─► _advance_turn()
+                 │       └─► UncivHeadless.advance_turn(save_path)
+                 │               └─► java -jar unciv/Unciv.jar
+                 │                   --advance-turn --save-file <path>
+                 │                   (fork custom con CLI headless)
+                 │
+                 ├─► parser.parse(save_path)
+                 │       └─► UncivStateParser
+                 │               ├─► load() — plain JSON o gzip
+                 │               ├─► _find_player_civ() — cerca "India"
+                 │               ├─► _extract_game_state()
+                 │               │       ├─► turn, gold, happiness
+                 │               │       ├─► statsHistory → science, culture, gold/turn
+                 │               │       ├─► techsInProgress → current_tech, progress
+                 │               │       ├─► tileList → units, tiles_explored
+                 │               │       ├─► proximity → n_known_civs
+                 │               │       └─► diplomacy → at_war
+                 │               └─► _parse_city() per ogni città
+                 │                       ├─► population, foodStored
+                 │                       ├─► constructionQueue[0]
+                 │                       ├─► inProgressConstructions
+                 │                       └─► builtBuildings, workedTiles, location
+                 │
+                 ├─► parser.to_observation_vector(state, selected_unit)
+                 │       └─► vettore numpy (52,) float32:
+                 │             [0-5]   Globale: turn, gold, happiness, sci/t, cult/t, n_cities
+                 │             [6-21]  Città 1: pop, food_prog, prod_prog, gold/t, food/t,
+                 │                              prod/t, n_buildings, has_monument..has_market,
+                 │                              tiles_worked, x, y
+                 │             [22-29] Tech: n_techs, tech_progress, has_agri..has_bronze
+                 │             [30-37] Unità: n_warriors, n_settlers, n_other,
+                 │                            warrior_xy, settler_xy, tiles_explored
+                 │             [38-45] Città 2 (zeros se assente)
+                 │             [46-47] Diplomazia: n_known_civs, at_war
+                 │             [48-51] Unità selezionata: sel_x, sel_y, sel_movement,
+                 │                                         tiles_explored_ratio
+                 │
+                 ├─► compute_reward(prev_state, curr_state, city_action)
+                 │       ├─► +pop_delta * 2.0
+                 │       ├─► +new_buildings * 1.5
+                 │       ├─► +new_techs * 3.0
+                 │       ├─► +clip(gold_delta/100, ±0.5)
+                 │       ├─► happiness < 0 → happiness * 0.1
+                 │       ├─► city_action == 6 → -0.05
+                 │       └─► +explored_delta * 0.3   ← Fase 2.1
+                 │
+                 ├─► _is_terminated() — happiness < -10
+                 │
+                 ├─► se terminated → compute_terminal_reward()
+                 │
+                 └─► return (obs, reward, terminated, truncated, info)
+```
+
+---
+
+## Spazi Gymnasium (Fase 2.1)
+
+```
+observation_space = Box(low=0.0, high=1.0, shape=(52,), dtype=float32)
+action_space      = Discrete(11)
+
+ACTION_MAP = {
+    0: "Monument",    1: "Granary",      2: "Library",   3: "Barracks",
+    4: "Settler",     5: "Warrior",      6: None,        # skip/EndTurn
+    7: "MOVE_NORTH",  8: "MOVE_SOUTH",   9: "MOVE_EAST", 10: "MOVE_WEST",
+}
+
+action_masks():
+    city step → [True]*7 + [False]*4    # solo costruzione valida
+    unit step → [False]*6 + [True]*5    # solo skip+movimento validi
 ```
 
 ---
@@ -111,13 +143,15 @@ UncivEnv.step(action)
 
 | Classe/Funzione | Input | Output | Responsabilità |
 |---|---|---|---|
-| `UncivStateParser.load()` | path file | dict raw | Legge JSON (plain o gzip) |
-| `UncivStateParser.parse()` | path file | `GameState` | Entry point: file → struttura dati |
-| `UncivStateParser.to_observation_vector()` | `GameState` | `np.ndarray (7,)` | Converte stato in input per PPO |
-| `_find_player_civ()` | dict raw | dict civ | Filtra civilizzazione "India" |
+| `UncivStateParser.load()` | path | dict raw | Legge JSON (plain o gzip) |
+| `UncivStateParser.parse()` | path | `GameState` | Entry point: file → struttura dati |
+| `UncivStateParser.to_observation_vector()` | `GameState`, `UnitState?` | `np.ndarray (52,)` | Stato → input MaskablePPO |
+| `_find_player_civ()` | dict raw | dict civ | Filtra civ "India" |
 | `_parse_city()` | dict city | `CityState` | Estrae dati singola città |
+| `_parse_units()` | tileList | `list[UnitState]` | Estrae unità player da tileList |
+| `_parse_stats_history()` | dict civ | dict | Parsa statsHistory compressa |
 
-**Contratto:** output sempre `shape=(7,)`, `dtype=float32`, valori in `[0, ~1]`.
+**Contratto:** output sempre `shape=(52,)`, `dtype=float32`.
 
 ---
 
@@ -125,18 +159,23 @@ UncivEnv.step(action)
 
 | Metodo | Chiamato da | Cosa fa |
 |---|---|---|
-| `reset()` | SB3 inizio episodio | Copia template, legge stato iniziale |
-| `step(action)` | SB3 ogni turno | Applica azione, avanza turno, calcola reward |
-| `_start_new_game()` | `reset()` | Copia `saves/template_game.json` → `saves/current_game_{rank}.json` |
-| `_apply_action()` | `step()` | Scrive costruzione scelta nel JSON |
-| `_advance_turn()` | `step()` | Esegue `UncivSimulator.advance_turn(raw)` (Fase 1.5) |
-| `_compute_reward()` | `step()` | Delega a `src/utils/reward.py` |
-| `_is_terminated()` | `step()` | `happiness < -10` → episodio finito |
+| `reset()` | SB3 inizio episodio | Init rotazione, copia template, legge stato |
+| `step(action)` | SB3 ogni step | Per-entity rotation: city/unit, advance turn |
+| `action_masks()` | MaskablePPO | Restituisce maschera 11 bool (city vs unit step) |
+| `_apply_action()` | `step()` city | Scrive costruzione nel JSON (azioni 0-5) |
+| `_apply_movement()` | `step()` unit | Sposta warrior nel JSON (tile swap) |
+| `_advance_game_turn()` | `step()` | Advance turn + parse + reward + return |
+| `_advance_turn()` | `_advance_game_turn()` | Chiama UncivHeadless subprocess |
+| `_get_obs()` | `step()`, `reset()` | obs con selected_unit se in unit step |
+| `_compute_reward()` | `_advance_game_turn()` | Delega a `src/utils/reward.py` |
+| `_is_terminated()` | `_advance_game_turn()` | `happiness < -10` |
 
-**Spazi Gymnasium:**
-```
-observation_space = Box(low=0.0, high=1.0, shape=(7,), dtype=float32)
-action_space      = Discrete(7)
+**Per-entity rotation state:**
+```python
+_step_type: str           # "city" | "unit"
+_unit_rotation_index: int # indice warrior corrente
+_pending_warriors: list   # warriors da muovere questo turno
+_buffered_city_action: int # azione città bufferizzata per reward
 ```
 
 ---
@@ -144,18 +183,19 @@ action_space      = Discrete(7)
 ### `src/utils/reward.py`
 
 ```
-compute_reward(prev, curr, action) → float
+compute_reward(prev, curr, action, weights) → float
     │
-    ├─ prev is None → return 0.0      (primo step)
-    ├─ popolazione aumentata → +2.0 per cittadino
-    ├─ edificio completato  → +1.5 per edificio
-    ├─ tecnologia scoperta  → +3.0 per tech
-    ├─ oro accumulato       → clip(delta/100, -0.5, +0.5)
-    ├─ happiness < 0        → happiness * 0.1 (negativo)
-    └─ action == 6 (idle)   → -0.05
+    ├─ prev is None → return 0.0
+    ├─ popolazione aumentata  → +2.0 per cittadino
+    ├─ edificio completato    → +1.5 per edificio
+    ├─ tecnologia scoperta    → +3.0 per tech
+    ├─ oro accumulato         → clip(delta/100, -0.5, +0.5)
+    ├─ happiness < 0          → happiness * 0.1 (negativo)
+    ├─ action == 6 (idle)     → -0.05
+    └─ tile nuova esplorata   → explored_delta * 0.3   ← Fase 2.1
 
 compute_terminal_reward(state, max_turns) → float
-    ├─ happiness >= 0 → +1.0 (survived)
+    ├─ happiness >= 0 → +1.0
     ├─ happiness < 0  → -1.0
     ├─ +techs_count * 0.1
     └─ +total_population * 0.05
@@ -163,18 +203,29 @@ compute_terminal_reward(state, max_turns) → float
 
 ---
 
+### `src/utils/headless.py`
+
+| Metodo | Cosa fa |
+|---|---|
+| `advance_turn(save_path)` | `java -jar Unciv.jar --advance-turn --save-file <path>` |
+| `start_new_game(template, save_path)` | Copia template in save_path |
+| `is_available()` | Verifica JAR e java raggiungibili |
+
+**Config necessaria:**
+```yaml
+unciv:
+  jar_path: "unciv/Unciv.jar"
+  java_path: "C:/Program Files/Eclipse Adoptium/jdk-25.0.3.9-hotspot/bin/java.exe"
+  headless_timeout: 60
+```
+
+---
+
 ### `src/utils/simulator.py`
 
-| Metodo | Input | Output | Responsabilita |
-|---|---|---|---|
-| `advance_turn(raw)` | dict JSON | dict JSON | Simula un turno completo (in-place) |
-| `_simulate_production(city)` | dict city | - | Accumula produzione, completa edificio |
-| `_simulate_population(city)` | dict city | - | Accumula cibo, cresce popolazione |
-| `_simulate_science(civ, tech)` | dict, dict | - | Accumula scienza, sblocca tech |
-| `_simulate_gold(civ, cities)` | dict, list | - | +1 oro per citta |
-| `_simulate_happiness(civ, cities)` | dict, list | - | 9.0 +/- bonus Monument +/- pop penalty |
+Micro-simulatore Python usato per sviluppo/test veloci (Fase 1.5).
+Non usato in training Fase 2.0+. Mantiene formule Unciv per riferimento:
 
-**Formule chiave:**
 ```
 produzione/turno  = 3 + max(0, population - 1)
 food_threshold    = 10 + population * 3
@@ -182,34 +233,17 @@ scienza/turno     = 2 + (2 se Library) + int(population * 0.5)
 happiness         = 9.0 + (1.0 se Monument) - max(0, (pop-1) * 0.5)
 ```
 
-**Nota:** Fa da ponte tra Fase 1 (stub) e Fase 2 (headless). Sostituito da
-`UncivHeadless.advance_turn()` quando si implementa `08_headless_integration.md`.
-
 ---
 
 ### `src/utils/diagnose_run.py`
 
 ```
 diagnose_save_file(save_path)
-    └─► legge current_game_0.json
-        stampa: turno, oro, happiness, pop, edifici, tech
-        warning automatici:
-            turn > 10 e nessun edificio  → produzione rotta
-            turn > 20 e nessuna tech     → scienza rotta
-            happiness < 0               → episodio terminato prematuramente
-            oro invariato a 50          → simulatore oro rotto
+    └─► legge save file, stampa stato, warning automatici
 
 simulate_30_turns()
-    └─► crea raw minimale (India, Delhi, pop=1)
-        esegue 30 turni con UncivSimulator
-        stampa tabella: turn | gold | happy | pop | built | techs
+    └─► UncivSimulator — verifica formule senza headless
 ```
-
-**Uso:**
-```
-python src/utils/diagnose_run.py        # analizza saves/current_game_0.json
-python src/utils/diagnose_run.py sim    # simula 30 turni (verifica simulatore)
-``` 
 
 ---
 
@@ -217,19 +251,13 @@ python src/utils/diagnose_run.py sim    # simula 30 turni (verifica simulatore)
 
 ```
 UncivMetricsCallback
-    _on_step()        → raccoglie info da episodi completati
-    _on_rollout_end() → logga su TensorBoard:
-                        unciv/gold_mean
-                        unciv/happiness_mean
-                        unciv/cities_mean
-                        unciv/turns_mean
+    _on_rollout_end() → TensorBoard:
+        unciv/gold_mean, unciv/happiness_mean,
+        unciv/cities_mean, unciv/turns_mean
 
 ActionDistributionCallback
-    _on_step()        → conta ogni azione eseguita
-    ogni 10k step     → logga frequenza:
-                        unciv/action_Monument
-                        unciv/action_Granary
-                        ... (7 azioni)
+    ogni 10k step → TensorBoard:
+        unciv/action_Monument ... unciv/action_MOVE_WEST  (11 azioni)
 ```
 
 ---
@@ -237,33 +265,36 @@ ActionDistributionCallback
 ### `train.py`
 
 ```
-load_config(yaml) → dict iperparametri
+load_config(yaml) → dict
 
-make_vec_env([make_env(rank=i) for i in range(n_envs)], n_envs=4)
-    └─► 4 istanze parallele di UncivEnv + Monitor wrapper
-        ogni env usa current_game_{rank}.json separato (no race condition)
-        eval env usa rank=n_envs (es. rank=4)
+DummyVecEnv([make_env(rank=i) for i in range(n_envs)])
+    └─► per ogni env:
+        UncivEnv(rank=i)
+        ActionMasker(env, lambda e: e.action_masks())  ← espone masks a MaskablePPO
+        Monitor(masked_env)
+    eval env usa rank=n_envs
 
-PPO(
-    policy="MlpPolicy",    # rete neurale fully-connected
+MaskablePPO(
+    policy="MlpPolicy",
+    env=env,
     learning_rate=3e-4,
-    n_steps=1024,          # step raccolti prima di ogni update (Fase 1.5)
+    n_steps=1024,
     batch_size=64,
     n_epochs=10,
     gamma=0.99,
     clip_range=0.2,
-    ent_coef=0.01          # entropia — aumentare a 0.05 se policy collassa
+    ent_coef=0.01,
 )
 
 CallbackList([
-    CheckpointCallback,         # salva ogni 10k step
-    EvalCallback,               # valuta ogni 50k step
-    UncivMetricsCallback,       # metriche Unciv custom
-    ActionDistributionCallback  # distribuzione azioni
+    CheckpointCallback,       # salva ogni 10k step → unciv_mppo_*.zip
+    MaskableEvalCallback,     # valuta ogni 50k step con masks
+    UncivMetricsCallback,     # metriche Unciv custom
+    ActionDistributionCallback,
 ])
 
-model.learn(total_timesteps=1_000_000)
-    └─► salva final_model.zip
+model.learn(total_timesteps=500_000)
+    └─► salva fase2_1_final_model.zip
 ```
 
 ---
@@ -274,27 +305,28 @@ model.learn(total_timesteps=1_000_000)
 train.py avvia
     │
     ▼
-4 ambienti paralleli (n_envs=4)
+4 ambienti paralleli DummyVecEnv (n_envs=4)
     │
     ▼
 ogni ambiente: reset() → copia template → legge stato
     │
     ▼
-PPO raccoglie 2048 step per ambiente = 8192 step totali
+MaskablePPO raccoglie 1024 step per ambiente = 4096 step totali
+    azione campionata con action_masks() (no azioni illegali)
     │
     ▼
 calcola vantaggio (GAE) e aggiorna policy (10 epochs)
     │
     ▼
-ogni 10.000 step → CheckpointCallback → salva .zip
-ogni 50.000 step → EvalCallback → valuta 5 episodi → salva best_model.zip
-ogni rollout     → UncivMetricsCallback → logga metriche custom
+ogni 10.000 step → CheckpointCallback → unciv_mppo_N_steps.zip
+ogni 50.000 step → MaskableEvalCallback → best_model.zip
+ogni rollout     → UncivMetricsCallback → metriche TensorBoard
     │
     ▼
-ripeti fino a 1.000.000 step totali
+ripeti fino a 500.000 step totali
     │
     ▼
-salva final_model.zip
+salva fase2_1_final_model.zip
 ```
 
 ---
@@ -303,11 +335,13 @@ salva final_model.zip
 
 | Metrica | Sana | Problema |
 |---|---|---|
-| `rollout/ep_rew_mean` | cresce nel tempo | piatta → reward mal progettata |
+| `rollout/ep_rew_mean` | cresce verso 5.0 | piatta → reward mal progettata |
 | `train/entropy_loss` | non scende a 0 | → 0 = policy collassata |
 | `train/approx_kl` | < 0.02 | > 0.05 = learning rate troppo alto |
 | `train/clip_fraction` | < 0.2 | > 0.3 = aggiornamenti troppo grandi |
-| `unciv/action_Idle` | < 30% | > 70% = reward hacking idle |
+| `unciv/action_Warrior` | sale entro 100k | 0 → agente non costruisce |
+| `unciv/action_MOVE_*` | sale entro 50k | 0 → masking non funziona |
+| `unciv/action_Monument` | sale | base costruzione |
 
 ---
 
@@ -315,17 +349,21 @@ salva final_model.zip
 
 ```
 train.py
+    ├── sb3_contrib.MaskablePPO
+    ├── sb3_contrib.common.wrappers.ActionMasker
+    ├── sb3_contrib.common.maskable.callbacks.MaskableEvalCallback
     ├── src/envs/unciv_env.py
     │       ├── src/parsers/state_parser.py
     │       ├── src/utils/reward.py
-    │       └── src/utils/simulator.py
+    │       └── src/utils/headless.py
     └── src/utils/callbacks.py
 
-src/utils/diagnose_run.py
-    └── src/utils/simulator.py  (modalità sim)
-
 evaluate.py
+    ├── sb3_contrib.MaskablePPO
     └── src/envs/unciv_env.py
+
+src/utils/diagnose_run.py
+    └── src/utils/simulator.py
 
 config/default_config.yaml
     └── letto da: train.py, unciv_env.py
@@ -337,23 +375,23 @@ config/default_config.yaml
 
 ```
 saves/
-    template_game.json      ← read-only, mai modificato
-    current_game_0.json     ← Env rank 0 (training)
-    current_game_1.json     ← Env rank 1 (training)
-    current_game_2.json     ← Env rank 2 (training)
-    current_game_3.json     ← Env rank 3 (training)
-    current_game_4.json     ← Eval env (rank = n_envs)
+    template_game.json          ← read-only, mai modificato
+    current_game_0.json         ← Env rank 0 (training)
+    current_game_1.json         ← Env rank 1 (training)
+    current_game_2.json         ← Env rank 2 (training)
+    current_game_3.json         ← Env rank 3 (training)
+    current_game_4.json         ← Eval env (rank=n_envs)
 
 models/checkpoints/
-    unciv_ppo_10000_steps.zip
-    unciv_ppo_20000_steps.zip
+    unciv_mppo_10000_steps.zip  ← checkpoint automatici
+    unciv_mppo_20000_steps.zip
     ...
-    final_model.zip
+    fase2_1_final_model.zip
     best/
         best_model.zip
 
 logs/
-    PPO_1/
+    MaskablePPO_1/
         events.out.tfevents.*   ← TensorBoard
-        evaluations.npz         ← dati EvalCallback
+        evaluations.npz         ← dati MaskableEvalCallback
 ```
