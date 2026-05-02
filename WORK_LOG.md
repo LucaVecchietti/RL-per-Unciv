@@ -5,6 +5,31 @@
 
 ---
 
+## [2026-05-02] — Sessione 19
+
+### Obiettivo sessione
+Fix bug scoperti a training avviato: metriche mancanti e ActionDistributionCallback stale.
+
+### File modificati
+- `src/utils/callbacks.py` (modificato — aggiunti `techs_mean`/`population_mean`, fix ActionDistribution 7→11 azioni)
+- `src/envs/unciv_env.py` (modificato — aggiunti `n_techs` e `population` all'info dict)
+- `tests/test_callbacks.py` (modificato — assert `(7,)` → `(11,)`)
+- `WORK_LOG.md` (questo aggiornamento)
+
+### Fatto
+- `unciv/techs_mean` e `unciv/population_mean`: erano nella spec `06_monitoring.md` ma mai implementati in `callbacks.py` né nell'info dict di `unciv_env.py`
+- `ActionDistributionCallback`: `_action_counts` array era `(7,)` e scartava azioni 7-10 (`MOVE_*`) — aggiornato a `(11,)` con nomi completi
+- Fix applicati a training in corso — attivi al prossimo run
+
+### Test
+- [x] 64/64 test verdi
+
+### TODO prossima sessione
+- Monitorare training in corso (MaskablePPO_4)
+- Verificare che al prossimo run compaiano `unciv/techs_mean`, `unciv/population_mean`, `unciv/action_MOVE_*`
+
+---
+
 ## [2026-05-02] — Sessione 18
 
 ### Obiettivo sessione
