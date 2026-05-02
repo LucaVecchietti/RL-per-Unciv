@@ -1,383 +1,271 @@
-# 08 — Headless Integration (Fase 2.0)
+# 08 — Unciv Fork + Headless CLI
 
 ## Obiettivo
-Sostituire il micro-simulatore Python (Fase 1.5) con vera integrazione Unciv headless.
-Dopo questa fase, il motore di gioco Unciv gira davvero ad ogni turno.
 
-**Scope Fase 2.0 (minimo):** stessa action space `Discrete(7)`, stessa obs `(7,)`.
-Solo `_advance_turn` cambia: da `UncivSimulator.advance_turn()` a `UncivHeadless.advance_turn()`.
-Validare che il loop funziona con Unciv reale prima di espandere (Fase 2.1).
+Creare un fork di Unciv che aggiunge argomenti CLI per avanzamento turno
+programmatico. Questo è il **prerequisito fondamentale** per tutto il training reale.
 
-> **Già implementato da Fase 1.5:** `env_rank` per save file separati, `DummyVecEnv` in `train.py`.
-> Non rifare queste modifiche.
+**Problema:** Unciv ufficiale non supporta `--advance-turn`. La modalità `headless`
+è un server multiplayer, non un tool di automazione single-player.
 
----
-
-## Cos'è la modalità headless
-
-Unciv può girare senza interfaccia grafica tramite il flag `headless`.
-In questa modalità:
-- Legge un save file JSON da disco
-- Esegue un turno completo (crescita città, produzione, ricerca, AI avversari)
-- Scrive il nuovo stato sul file JSON
-- Si chiude
-
-Il ciclo Python → Unciv → Python avviene ad ogni step dell'ambiente.
-
+**Soluzione:** Fork Unciv (open source Kotlin), aggiungere ~80 righe in
+`DesktopLauncher.kt` per abilitare il ciclo:
 ```
-Python scrive azione → saves/current_game_0.json
-         │
-         ▼
-java -jar Unciv.jar headless --save-file current_game_0.json
-         │
-         ▼
-Unciv esegue turno → aggiorna current_game_0.json
-         │
-         ▼
-Python legge nuovo stato → calcola reward
+Python → scrive azione in JSON → java -jar Unciv_fork.jar --advance-turn --save-file X → Unciv avanza turno → Python legge nuovo stato
 ```
 
 ---
 
 ## Prerequisiti
 
-```yaml
-# Aggiungere a config/default_config.yaml
-unciv:
-  jar_path: "unciv/Unciv.jar"     # path relativo alla root del progetto
-  headless_timeout: 30             # secondi max per turno
-  saves_prefix: "current_game"     # prefisso save files paralleli
+- JDK installato (`C:\Program Files\Eclipse Adoptium\jdk-25.0.3.9-hotspot\bin\java.exe`)
+- Git installato
+- ~3GB spazio disco (repo Unciv + build)
+- Connessione internet per clone + dipendenze Gradle
+
+---
+
+## Step 1 — Clone Unciv
+
+```powershell
+# Clona nella root del progetto RL
+cd "C:\Users\Luca Vecchietti\Desktop\RL-per-Unciv"
+git clone https://github.com/yairm210/Unciv.git unciv-src
+cd unciv-src
 ```
 
-Scaricare Unciv.jar nella cartella `unciv/` nella root del progetto:
+Verificare che il build funzioni prima di modificare:
+```powershell
+.\gradlew desktop:dist
 ```
-unciv-rl-agent/
-└── unciv/
-    └── Unciv.jar     ← da scaricare da GitHub releases
+Output atteso: `unciv-src/desktop/build/libs/Unciv.jar`
+
+> ⚠️ Il build richiede 5-15 minuti al primo avvio (scarica dipendenze Gradle).
+
+---
+
+## Step 2 — Comprendere la struttura
+
+File rilevanti:
+```
+unciv-src/
+├── desktop/src/com/unciv/app/desktop/
+│   └── DesktopLauncher.kt   ← entry point desktop, QUI aggiungiamo il CLI
+├── core/src/com/unciv/
+│   ├── UncivGame.kt          ← classe principale del gioco
+│   ├── logic/GameInfo.kt     ← stato della partita, ha nextTurn()
+│   └── files/UncivFiles.kt   ← load/save partite
+```
+
+Leggere `DesktopLauncher.kt` per capire come viene gestito il ramo `headless`
+esistente prima di aggiungere il nuovo ramo `--advance-turn`.
+
+---
+
+## Step 3 — Modificare DesktopLauncher.kt
+
+Aprire `unciv-src/desktop/src/com/unciv/app/desktop/DesktopLauncher.kt`.
+
+Trovare il blocco `fun main(args: Array<String>)` e aggiungere il ramo
+`--advance-turn` **prima** del ramo `headless` esistente:
+
+```kotlin
+fun main(args: Array<String>) {
+
+    // --- NUOVO RAMO: avanzamento turno headless per RL training ---
+    if (args.contains("--advance-turn")) {
+        val saveFileIndex = args.indexOf("--save-file")
+        if (saveFileIndex < 0 || saveFileIndex + 1 >= args.size) {
+            println("Uso: Unciv.jar --advance-turn --save-file <path>")
+            System.exit(1)
+        }
+        val savePath = java.io.File(args[saveFileIndex + 1])
+        if (!savePath.exists()) {
+            println("Save file non trovato: ${savePath.absolutePath}")
+            System.exit(1)
+        }
+
+        val headlessConfig = com.badlogic.gdx.backends.headless.HeadlessApplicationConfiguration()
+        com.badlogic.gdx.backends.headless.HeadlessApplication(
+            object : com.badlogic.gdx.ApplicationAdapter() {
+                override fun create() {
+                    try {
+                        val gameInfo = com.unciv.UncivGame.Current.files.loadGameFromFile(savePath)
+                        gameInfo.nextTurn()
+                        com.unciv.UncivGame.Current.files.saveGame(gameInfo, savePath.path)
+                        println("Turn advanced. New turn: ${gameInfo.turns}")
+                    } catch (e: Exception) {
+                        System.err.println("Errore avanzamento turno: ${e.message}")
+                        com.badlogic.gdx.Gdx.app.exit()
+                        System.exit(1)
+                    }
+                    com.badlogic.gdx.Gdx.app.exit()
+                }
+            },
+            headlessConfig
+        )
+        return
+    }
+    // --- FINE NUOVO RAMO ---
+
+    // ... resto del main esistente invariato ...
+}
+```
+
+> ⚠️ **Nota implementativa:** Le API esatte (`loadGameFromFile`, `saveGame`,
+> `UncivGame.Current`) dipendono dalla versione di Unciv clonata. Leggere il
+> sorgente reale prima di scrivere il codice definitivo. Lo snippet sopra è
+> orientativo — adattare ai nomi effettivi trovati nel sorgente.
+
+---
+
+## Step 4 — Aggiungere dipendenza headless LibGDX
+
+In `unciv-src/desktop/build.gradle.kts` verificare che sia presente
+la dipendenza `gdx-backend-headless`. Se mancante, aggiungerla:
+
+```kotlin
+dependencies {
+    // ... dipendenze esistenti ...
+    implementation("com.badlogicgames.gdx:gdx-backend-headless:${gdxVersion}")
+    implementation("com.badlogicgames.gdx:gdx:${gdxVersion}")
+}
 ```
 
 ---
 
-## Verifica headless manuale
-
-Prima di integrare nel codice, verificare che headless funzioni:
+## Step 5 — Build JAR custom
 
 ```powershell
-# Dalla root del progetto
-java -jar unciv/Unciv.jar headless
+cd "C:\Users\Luca Vecchietti\Desktop\RL-per-Unciv\unciv-src"
+.\gradlew desktop:dist
+```
+
+Copiare JAR custom nella cartella del progetto RL:
+```powershell
+Copy-Item "desktop\build\libs\Unciv.jar" "..\unciv\Unciv.jar" -Force
+```
+
+---
+
+## Step 6 — Verificare che funzioni
+
+Test manuale dal terminale (dalla root del progetto RL):
+
+```powershell
+& "C:\Program Files\Eclipse Adoptium\jdk-25.0.3.9-hotspot\bin\java.exe" `
+  -jar unciv\Unciv.jar `
+  --advance-turn `
+  --save-file saves\template_game.json
 ```
 
 Output atteso:
 ```
-Unciv headless mode
-Waiting for save file...
+Turn advanced. New turn: 3
 ```
 
-> ⚠️ Se headless non è ancora supportato nella versione scaricata,
-> controllare: https://github.com/yairm210/Unciv/issues
-> e usare lo stub JSON della Fase 1 finché non viene rilasciato.
+Se funziona, il save file `template_game.json` avrà il turno incrementato.
 
 ---
 
-## Implementazione: `src/utils/headless.py`
+## Step 7 — Aggiornare config e headless.py
 
-Nuovo modulo dedicato alla comunicazione con Unciv headless.
-
-```python
-import subprocess
-import json
-import shutil
-from pathlib import Path
-from typing import Optional
-
-
-class UncivHeadless:
-    """
-    Gestisce l'esecuzione di Unciv in modalità headless.
-    Isola tutta la logica subprocess in un unico modulo testabile.
-    """
-
-    def __init__(self, jar_path: str, timeout: int = 30) -> None:
-        self.jar_path = Path(jar_path)
-        self.timeout = timeout
-        self._validate_jar()
-
-    def _validate_jar(self) -> None:
-        """Verifica che il JAR esista prima di procedere."""
-        if not self.jar_path.exists():
-            raise FileNotFoundError(
-                f"Unciv.jar non trovato in: {self.jar_path}\n"
-                f"Scaricalo da: https://github.com/yairm210/Unciv/releases/latest"
-            )
-
-    def advance_turn(self, save_path: Path) -> None:
-        """
-        Avanza di un turno eseguendo Unciv headless sul save file indicato.
-
-        Args:
-            save_path: Path al file JSON di salvataggio da aggiornare.
-
-        Raises:
-            RuntimeError: Se Unciv headless fallisce o va in timeout.
-            TimeoutError: Se il turno supera self.timeout secondi.
-        """
-        if not save_path.exists():
-            raise FileNotFoundError(f"Save file non trovato: {save_path}")
-
-        try:
-            result = subprocess.run(
-                [
-                    "java", "-jar", str(self.jar_path),
-                    "headless",
-                    "--save-file", str(save_path),
-                    "--advance-turn",
-                ],
-                capture_output=True,
-                text=True,
-                timeout=self.timeout,
-            )
-        except subprocess.TimeoutExpired:
-            raise TimeoutError(
-                f"Unciv headless timeout dopo {self.timeout}s "
-                f"su file: {save_path}"
-            )
-
-        if result.returncode != 0:
-            raise RuntimeError(
-                f"Unciv headless fallito (returncode={result.returncode})\n"
-                f"stdout: {result.stdout[:500]}\n"
-                f"stderr: {result.stderr[:500]}"
-            )
-
-    def start_new_game(self, template_path: Path, dest_path: Path) -> None:
-        """
-        Crea una nuova partita copiando il template.
-
-        Args:
-            template_path: Save file template da copiare.
-            dest_path: Destinazione del nuovo save file.
-        """
-        if not template_path.exists():
-            raise FileNotFoundError(
-                f"Template non trovato: {template_path}\n"
-                "Genera una partita manuale con Unciv e copiala in saves/template_game.json"
-            )
-        dest_path.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy(template_path, dest_path)
-
-    def is_available(self) -> bool:
-        """Controlla se Java e Unciv.jar sono disponibili."""
-        try:
-            result = subprocess.run(
-                ["java", "-version"],
-                capture_output=True,
-                timeout=5,
-            )
-            return result.returncode == 0 and self.jar_path.exists()
-        except (subprocess.TimeoutExpired, FileNotFoundError):
-            return False
+**`config/default_config.yaml`** — aggiungere `java_path`:
+```yaml
+unciv:
+  jar_path: "unciv/Unciv.jar"
+  java_path: "C:/Program Files/Eclipse Adoptium/jdk-25.0.3.9-hotspot/bin/java.exe"
+  headless_timeout: 60    # aumentato: JVM startup ~5s
+  saves_prefix: "current_game"
 ```
 
----
-
-## Aggiornamento: `src/envs/unciv_env.py`
-
-### Modifiche necessarie
-
-**1. Aggiungere `env_rank` per save files paralleli**
-
+**`src/utils/headless.py`** — rendere `java_path` configurabile:
 ```python
-def __init__(
-    self,
-    config_path: str = "config/default_config.yaml",
-    env_rank: int = 0,
-    render_mode: Optional[str] = None,
-) -> None:
-    super().__init__()
-    self.render_mode = render_mode
-    self.env_rank = env_rank
-    self.config = self._load_config(config_path)
-    self.parser = UncivStateParser(player_civ="India")
+def __init__(self, jar_path: str, timeout: int = 60, java_path: str = "java") -> None:
+    self.jar_path = Path(jar_path)
+    self.java_path = java_path
+    self.timeout = timeout
+    self._validate_jar()
 
-    # Save file univoco per questo env (evita race conditions con n_envs > 1)
-    saves_dir = Path(self.config["paths"]["unciv_saves"])
-    prefix = self.config.get("unciv", {}).get("saves_prefix", "current_game")
-    self.save_path = saves_dir / f"{prefix}_{env_rank}.json"
-    self.template_path = saves_dir / "template_game.json"
-
-    self.max_turns = self.config["environment"]["max_turns"]
-
-    # Inizializza headless (Fase 2)
-    unciv_cfg = self.config.get("unciv", {})
-    jar_path = unciv_cfg.get("jar_path", "unciv/Unciv.jar")
-    timeout = unciv_cfg.get("headless_timeout", 30)
-    self.headless = UncivHeadless(jar_path=jar_path, timeout=timeout)
-
-    # Spazi Gymnasium (invariati)
-    self.observation_space = gym.spaces.Box(
-        low=0.0, high=1.0, shape=(7,), dtype=np.float32
+def advance_turn(self, save_path: Path) -> None:
+    result = subprocess.run(
+        [
+            self.java_path, "-jar", str(self.jar_path),
+            "--advance-turn",
+            "--save-file", str(save_path),
+        ],
+        ...
     )
-    self.action_space = gym.spaces.Discrete(len(ACTION_MAP))
-
-    self._current_state: Optional[GameState] = None
-    self._prev_state: Optional[GameState] = None
-    self._episode_steps = 0
 ```
 
-**2. Aggiornare `_start_new_game`**
-
+**`src/envs/unciv_env.py`** — passare `java_path` a UncivHeadless:
 ```python
-def _start_new_game(self) -> None:
-    """Crea una nuova partita copiando il template (Fase 1 e 2)."""
-    self.headless.start_new_game(self.template_path, self.save_path)
-```
-
-**3. Aggiornare `_advance_turn`**
-
-```python
-def _advance_turn(self) -> None:
-    """
-    Fase 2: avanza il turno via Unciv headless.
-    Sostituisce lo stub JSON della Fase 1.
-    """
-    self.headless.advance_turn(self.save_path)
-```
-
-**4. Import da aggiungere in cima al file**
-
-```python
-from src.utils.headless import UncivHeadless
+java_path = unciv_cfg.get("java_path", "java")
+self.headless = UncivHeadless(jar_path=jar_path, timeout=timeout, java_path=java_path)
 ```
 
 ---
 
-## Aggiornamento: `train.py`
+## Step 8 — Ottimizzare JVM startup (opzionale)
 
-Aggiornare `make_env` per passare `env_rank`:
+JVM impiegha ~3-5 secondi per avviarsi. Con n_envs=4 e 150 turni/episodio:
+`5s × 4 env × ~1000 episodi = ~6 ore solo di startup JVM`.
 
-```python
-def make_env(config_path: str, rank: int = 0):
-    """Factory function per make_vec_env con env_rank per save files separati."""
-    def _init():
-        env = UncivEnv(config_path=config_path, env_rank=rank)
-        return Monitor(env)
-    return _init
+Soluzione: **JVM persistente** — avviare Unciv come processo long-running
+che riceve comandi via stdin/socket invece di riavviarsi ogni turno.
 
-
-def train(config_path: str = "config/default_config.yaml", resume: str = None) -> None:
-    ...
-    n_envs = tc["n_envs"]
-
-    # DummyVecEnv con rank univoco per save file separati (già implementato Fase 1.5)
-    env = DummyVecEnv([make_env(config_path, rank=i) for i in range(n_envs)])
-    eval_env = DummyVecEnv([make_env(config_path, rank=n_envs)])
-    ...
+```
+Python → scrive comando in stdin: "advance current_game_0.json"
+Unciv fork (long-running) → avanza turno → scrive "done" su stdout
+Python → legge "done" → continua
 ```
 
-> ⚠️ L'env di valutazione usa `rank=n_envs` (es. rank=4) per avere un save file
-> separato anche dai 4 env di training.
+Questo riduce overhead a <100ms/turno.
+
+> Implementare DOPO aver verificato che il ciclo base funziona.
+> Spec dettagliata in un file separato quando necessario.
 
 ---
 
-## Test: `tests/test_headless.py`
+## Step 9 — Prima run training con Unciv reale
 
-```python
-import pytest
-from unittest.mock import patch, MagicMock
-from pathlib import Path
-from src.utils.headless import UncivHeadless
-
-
-@pytest.fixture
-def headless(tmp_path):
-    """Headless con JAR fittizio (file esistente ma non reale)."""
-    jar = tmp_path / "Unciv.jar"
-    jar.write_bytes(b"fake jar")
-    return UncivHeadless(jar_path=str(jar), timeout=5)
-
-
-def test_jar_not_found_raises():
-    with pytest.raises(FileNotFoundError):
-        UncivHeadless(jar_path="/nonexistent/Unciv.jar")
-
-
-def test_advance_turn_save_not_found(headless, tmp_path):
-    with pytest.raises(FileNotFoundError):
-        headless.advance_turn(tmp_path / "missing.json")
-
-
-def test_advance_turn_success(headless, tmp_path):
-    save = tmp_path / "game.json"
-    save.write_text('{"turns": 2}')
-
-    with patch("subprocess.run") as mock_run:
-        mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
-        headless.advance_turn(save)
-        mock_run.assert_called_once()
-
-
-def test_advance_turn_failure(headless, tmp_path):
-    save = tmp_path / "game.json"
-    save.write_text('{"turns": 2}')
-
-    with patch("subprocess.run") as mock_run:
-        mock_run.return_value = MagicMock(returncode=1, stdout="", stderr="error")
-        with pytest.raises(RuntimeError):
-            headless.advance_turn(save)
-
-
-def test_advance_turn_timeout(headless, tmp_path):
-    import subprocess
-    save = tmp_path / "game.json"
-    save.write_text('{"turns": 2}')
-
-    with patch("subprocess.run", side_effect=subprocess.TimeoutExpired("java", 5)):
-        with pytest.raises(TimeoutError):
-            headless.advance_turn(save)
-
-
-def test_start_new_game(headless, tmp_path):
-    template = tmp_path / "template.json"
-    template.write_text('{"turns": 2}')
-    dest = tmp_path / "current_game_0.json"
-
-    headless.start_new_game(template, dest)
-    assert dest.exists()
-    assert dest.read_text() == template.read_text()
-
-
-def test_start_new_game_no_template(headless, tmp_path):
-    with pytest.raises(FileNotFoundError):
-        headless.start_new_game(tmp_path / "missing.json", tmp_path / "dest.json")
-
-
-def test_is_available_false_no_jar(tmp_path):
-    jar = tmp_path / "fake.jar"
-    # Non creare il file → jar non esiste
-    with pytest.raises(FileNotFoundError):
-        UncivHeadless(jar_path=str(jar))
+```powershell
+# Dalla root del progetto RL
+.venv\Scripts\python train.py
 ```
+
+Monitorare:
+- Nessun crash (subprocess headless funziona)
+- `ep_rew_mean` cresce (Unciv reale produce reward corrette)
+- Tempo medio per turno (`unciv/turn_time_ms` su TensorBoard) < 10s
 
 ---
 
-## Checklist Fase 2
+## Checklist
 
 ```
-[ ] Unciv.jar scaricato in unciv/Unciv.jar
-[ ] headless testato manualmente con java -jar unciv/Unciv.jar headless
-[ ] config/default_config.yaml aggiornato con sezione unciv:
-[ ] src/utils/headless.py creato
-[ ] src/envs/unciv_env.py aggiornato (env_rank + UncivHeadless)
-[ ] train.py aggiornato (make_env con rank)
-[ ] tests/test_headless.py creato — tutti i test passano
-[ ] python train.py avviato con headless reale
-[ ] TensorBoard: ep_rew_mean cresce rispetto alla Fase 1
+[ ] Unciv clonato in unciv-src/
+[ ] Build originale funziona (gradlew desktop:dist)
+[ ] DesktopLauncher.kt modificato (leggere API reale prima)
+[ ] Build custom funziona
+[ ] Test manuale --advance-turn su template_game.json
+[ ] config.yaml aggiornato (java_path, headless_timeout=60)
+[ ] headless.py aggiornato (java_path configurabile)
+[ ] unciv_env.py aggiornato (passa java_path)
+[ ] test_headless.py aggiornato (java_path nei test)
+[ ] python -m pytest tests/ -v → tutti verdi
+[ ] python train.py → nessun crash, reward cresce
 ```
 
 ---
 
 ## Note per Claude Code
-- `UncivHeadless` deve essere **mockabile nei test** — non chiamare subprocess direttamente in `unciv_env.py`
-- Il `env_rank` dell'env di valutazione è sempre `n_envs` (non 0) — evita conflitti sui save files
-- Se Unciv headless non è ancora disponibile: lasciare lo stub JSON della Fase 1 e saltare al file `09_expansion.md` per preparare l'observation space
-- Loggare sempre il tempo medio per turno su TensorBoard (`unciv/turn_time_ms`) — se supera 5 secondi il training diventa impraticabile
+
+- **Leggere il sorgente Unciv prima di scrivere Kotlin** — le API cambiano tra versioni.
+  Cercare `loadGameFromFile`, `saveGame`, `nextTurn` nel sorgente clonato.
+- Il ramo `--advance-turn` va aggiunto PRIMA del ramo `headless` esistente.
+- `HeadlessApplication` di LibGDX non renderizza nulla — sicuro per server/CI.
+- Se `UncivGame.Current` non è inizializzato in headless mode, serve istanziarlo
+  prima di chiamare `files.loadGameFromFile()`.
+- Loggare il tempo medio turno su TensorBoard: se >10s il training è impraticabile.
+- **Non toccare** `test_env.py`, `test_simulator.py`, `test_reward.py` — già verdi.
