@@ -136,6 +136,27 @@ def test_close_noop_when_no_process(headless):
     headless.close()  # must not raise
 
 
+def test_advance_turn_skips_log_lines_before_ready(headless, tmp_path):
+    """JVM may print log lines before READY — must skip them and still succeed."""
+    save = tmp_path / "game.json"
+    save.write_text('{"turns": 2}')
+
+    all_lines = iter([
+        "[HeadlessApplication] Creating UncivFiles...\n",
+        "Loaded 2 rulesets in 257ms\n",
+        "READY\n",
+        "ok 3\n",
+    ])
+    mock_proc = MagicMock()
+    mock_proc.poll.return_value = None
+    mock_proc.stdout.readline.side_effect = lambda: next(all_lines, "")
+    mock_proc.stdin = MagicMock()
+    mock_proc.stderr.read.return_value = ""
+
+    with patch("subprocess.Popen", return_value=mock_proc):
+        headless.advance_turn(save)
+
+
 def test_reuse_process_across_calls(headless, tmp_path):
     """JVM process started once and reused for multiple advance_turn calls."""
     save = tmp_path / "game.json"

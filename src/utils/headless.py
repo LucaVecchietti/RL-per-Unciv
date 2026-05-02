@@ -1,6 +1,7 @@
 import subprocess
 import shutil
 import threading
+import time
 from pathlib import Path
 from typing import Optional
 
@@ -59,18 +60,28 @@ class UncivHeadless:
             text=True,
             bufsize=1,
         )
-        ready_line = self._readline_timeout(self._process.stdout, self.timeout)
-        if ready_line is None or ready_line.strip() != "READY":
-            stderr_snippet = ""
-            try:
-                self._process.terminate()
-                stderr_snippet = self._process.stderr.read(500)
-            except Exception:
-                pass
-            self._process = None
-            raise RuntimeError(
-                f"JVM server non pronto. Got: {ready_line!r}\nstderr: {stderr_snippet}"
-            )
+        # JVM may print log lines to stdout before "READY" — skip them
+        deadline = time.monotonic() + self.timeout
+        while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                break
+            line = self._readline_timeout(self._process.stdout, max(1.0, remaining))
+            if line is None or line == "":
+                break
+            if line.strip() == "READY":
+                return
+        stderr_snippet = ""
+        try:
+            self._process.terminate()
+            stderr_snippet = self._process.stderr.read(500)
+        except Exception:
+            pass
+        self._process = None
+        raise RuntimeError(
+            f"JVM server non pronto: READY non ricevuto entro {self.timeout}s\n"
+            f"stderr: {stderr_snippet}"
+        )
 
     def advance_turn(self, save_path: Path) -> None:
         """
