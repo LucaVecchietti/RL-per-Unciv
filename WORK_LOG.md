@@ -5,6 +5,32 @@
 
 ---
 
+## [2026-05-03] — Sessione 24
+
+### Obiettivo sessione
+Fix bug: tech research non veniva aggiornata durante training → `techs_mean: 2` dopo 155 turni.
+
+### File modificati
+- `src/utils/ruleset_reader.py` (modificato — aggiunta `load_tech_prereqs()`)
+- `src/envs/unciv_env.py` (modificato — import `load_tech_prereqs`, `self._tech_prereqs` in `__init__`, metodo `_ensure_tech_queued()`, chiamata in `_advance_game_turn()`)
+- `tests/test_env.py` (modificato — 2 nuovi test per `_ensure_tech_queued`)
+- `WORK_LOG.md` (questo aggiornamento)
+
+### Fatto
+- Diagnosticato: `currentTechResearch: None` nel save → Unciv non ricercava nulla, scienza sprecata
+- `load_tech_prereqs(jar_path)` → `{tech_name: [prereq_names]}` per era Ancient+Classical
+- `_ensure_tech_queued()` auto-seleziona prima tech disponibile (prereq soddisfatti) se coda vuota
+- Chiamata in `_advance_game_turn()` prima di `_advance_turn()`
+
+### Test
+- [x] 84/84 test verdi
+
+### TODO prossima sessione
+1. Verificare che `techs_mean` salga durante training (target: >5 in 150 turni)
+2. Installare `sb3_contrib` su sistema se necessario per training headless
+
+---
+
 ## [2026-05-03] — Sessione 23
 
 ### Obiettivo sessione

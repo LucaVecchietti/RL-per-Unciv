@@ -8,7 +8,7 @@ import json
 from src.parsers.state_parser import UncivStateParser, GameState, UnitState
 from src.utils.reward import compute_reward, compute_terminal_reward
 from src.utils.headless import UncivHeadless
-from src.utils.ruleset_reader import load_early_game_constructions
+from src.utils.ruleset_reader import load_early_game_constructions, load_tech_prereqs
 
 # ACTION_MAP built dynamically in __init__ from load_early_game_constructions().
 # Order: buildings (alphabetical) → units (alphabetical) → None (skip) → MOVE_*
@@ -58,6 +58,7 @@ class UncivEnv(gym.Env):
 
         constructions = load_early_game_constructions(jar_path)
         self._prereq_map: dict[str, Optional[str]] = {c.name: c.required_tech for c in constructions}
+        self._tech_prereqs: dict[str, list[str]] = load_tech_prereqs(jar_path)
         self._unit_names: set[str] = {c.name for c in constructions if c.is_unit}
         self._building_names: set[str] = {c.name for c in constructions if not c.is_unit}
 
@@ -250,6 +251,7 @@ class UncivEnv(gym.Env):
         """Avanza turno Unciv, calcola reward, restituisce output step."""
         self._prev_state = self._current_state
         self._episode_steps += 1
+        self._ensure_tech_queued()
         self._advance_turn()
         self._current_state = self.parser.parse(self.save_path)
         obs = self._get_obs()
@@ -275,6 +277,37 @@ class UncivEnv(gym.Env):
                 self._unit_rotation_index < len(self._pending_warriors)):
             selected = self._pending_warriors[self._unit_rotation_index]
         return self.parser.to_observation_vector(self._current_state, selected_unit=selected)
+
+    def _ensure_tech_queued(self) -> None:
+        """Auto-select a tech if no research is queued, preventing science waste."""
+        try:
+            with open(self.save_path, 'r') as f:
+                raw = json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            return
+
+        for civ in raw.get("civilizations", []):
+            if civ.get("civName") != "India":
+                continue
+            tech = civ.get("tech", {})
+            if tech.get("currentTechResearch"):
+                return
+            researched = set(tech.get("techsResearched") or [])
+            chosen = next(
+                (t for t, prereqs in sorted(self._tech_prereqs.items())
+                 if t not in researched and all(p in researched for p in prereqs)),
+                None,
+            )
+            if chosen is None:
+                return
+            tech["currentTechResearch"] = chosen
+            if not tech.get("techsInProgress"):
+                tech["techsInProgress"] = {chosen: 0}
+            civ["tech"] = tech
+            break
+
+        with open(self.save_path, 'w') as f:
+            json.dump(raw, f)
 
     def _advance_turn(self) -> None:
         """Fase 2.0: avanza turno via Unciv headless."""

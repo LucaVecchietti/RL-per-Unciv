@@ -60,6 +60,20 @@ def get_ancient_classical_techs(jar_path: str) -> set[str]:
     return result
 
 
+def load_tech_prereqs(jar_path: str) -> dict[str, list[str]]:
+    """Return {tech_name: [prerequisite_tech_names]} for Ancient+Classical techs."""
+    with zipfile.ZipFile(jar_path, "r") as jar:
+        techs_data = _load_jsonc(jar, _TECHS_PATH)
+    result: dict[str, list[str]] = {}
+    for era_block in techs_data:
+        if era_block.get("era") not in _TARGET_ERAS:
+            continue
+        for tech in era_block.get("techs", []):
+            name = tech.get("name", "")
+            result[name] = tech.get("prerequisites", [])
+    return result
+
+
 def load_early_game_constructions(jar_path: str) -> list[ConstructionInfo]:
     """
     Read buildings + units from the Unciv JAR, return Ancient + Classical constructions.

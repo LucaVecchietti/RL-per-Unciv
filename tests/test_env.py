@@ -201,6 +201,56 @@ def test_per_entity_rotation_advances_turn_after_warrior(env):
     mock_adv.assert_called_once()
 
 
+def test_ensure_tech_queued_sets_tech(env, tmp_path):
+    """_ensure_tech_queued scrive currentTechResearch quando mancante."""
+    import json as _json
+    save = tmp_path / "game.json"
+    raw = {
+        "civilizations": [{
+            "civName": "India",
+            "tech": {
+                "techsResearched": ["Agriculture"],
+                "techsInProgress": None,
+                "currentTechResearch": None,
+            }
+        }]
+    }
+    save.write_text(_json.dumps(raw))
+    env.save_path = save
+    env._tech_prereqs = {
+        "Agriculture": [],
+        "Pottery": ["Agriculture"],
+        "Mining": ["Agriculture"],
+        "Writing": ["Pottery"],
+    }
+    env._ensure_tech_queued()
+    result = _json.loads(save.read_text())
+    tech = result["civilizations"][0]["tech"]
+    assert tech["currentTechResearch"] in {"Mining", "Pottery"}  # prereq Agriculture ✓
+
+
+def test_ensure_tech_queued_noop_if_already_set(env, tmp_path):
+    """_ensure_tech_queued non sovrascrive se currentTechResearch è già settato."""
+    import json as _json
+    save = tmp_path / "game.json"
+    raw = {
+        "civilizations": [{
+            "civName": "India",
+            "tech": {
+                "techsResearched": ["Agriculture"],
+                "techsInProgress": {"Pottery": 10},
+                "currentTechResearch": "Pottery",
+            }
+        }]
+    }
+    save.write_text(_json.dumps(raw))
+    env.save_path = save
+    env._tech_prereqs = {"Agriculture": [], "Pottery": ["Agriculture"]}
+    env._ensure_tech_queued()
+    result = _json.loads(save.read_text())
+    assert result["civilizations"][0]["tech"]["currentTechResearch"] == "Pottery"
+
+
 def test_obs_contains_selected_unit_coords(env):
     """In unit step, obs[53-55] riflettono unità selezionata."""
     warrior = UnitState("Warrior", x=10, y=10, movement_points=2.0)
