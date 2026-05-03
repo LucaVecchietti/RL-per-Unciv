@@ -5,6 +5,27 @@
 
 ---
 
+## [2026-05-03] — Sessione 26
+
+### Obiettivo sessione
+Fix crash `TypeError: 'NoneType' object is not iterable` in `state_parser.py`.
+
+### File modificati
+- `src/parsers/state_parser.py` (modificato — riga 127: `tech.get('techsInProgress', {})` → `tech.get('techsInProgress') or {}`)
+
+### Fatto
+- Root cause: `_advance_tech()` scrive `techsInProgress = None` quando nessuna tech disponibile; `dict.get(key, default)` restituisce `None` (non il default) se chiave presente con valore `None`; `iter(None)` → crash
+- Fix one-liner: `or {}` fallback gestisce esplicitamente il null JSON
+
+### Test
+- [x] 80/84 test verdi (4 falliscono per `sb3_contrib` non installato — pre-esistente, non correlato)
+
+### TODO prossima sessione
+1. Restart training e verificare `techs_mean` > 5
+2. Monitorare se tech chain (Agriculture → Pottery → Writing...) funziona correttamente
+
+---
+
 ## [2026-05-03] — Sessione 25
 
 ### Obiettivo sessione

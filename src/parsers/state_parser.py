@@ -124,7 +124,7 @@ class UncivStateParser:
 
         # Tech corrente da techsInProgress (prima chiave)
         techs_researched: list[str] = tech.get('techsResearched', [])
-        techs_in_progress: dict = tech.get('techsInProgress', {})
+        techs_in_progress: dict = tech.get('techsInProgress') or {}
         current_tech: Optional[str] = next(iter(techs_in_progress), None)
         current_tech_progress = float(techs_in_progress.get(current_tech, 0.0)) if current_tech else 0.0
         current_tech_cost = float(_TECH_COSTS.get(current_tech, 60.0)) if current_tech else 60.0
