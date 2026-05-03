@@ -5,7 +5,7 @@ from typing import Optional
 import yaml
 import json
 
-from src.parsers.state_parser import UncivStateParser, GameState, UnitState
+from src.parsers.state_parser import UncivStateParser, GameState, UnitState, _TECH_COSTS
 from src.utils.reward import compute_reward, compute_terminal_reward
 from src.utils.headless import UncivHeadless
 from src.utils.ruleset_reader import load_early_game_constructions, load_tech_prereqs
@@ -251,8 +251,8 @@ class UncivEnv(gym.Env):
         """Avanza turno Unciv, calcola reward, restituisce output step."""
         self._prev_state = self._current_state
         self._episode_steps += 1
-        self._ensure_tech_queued()
         self._advance_turn()
+        self._advance_tech()
         self._current_state = self.parser.parse(self.save_path)
         obs = self._get_obs()
         reward = self._compute_reward(self._prev_state, self._current_state, self._buffered_city_action)
@@ -278,8 +278,8 @@ class UncivEnv(gym.Env):
             selected = self._pending_warriors[self._unit_rotation_index]
         return self.parser.to_observation_vector(self._current_state, selected_unit=selected)
 
-    def _ensure_tech_queued(self) -> None:
-        """Auto-select a tech if no research is queued, preventing science waste."""
+    def _advance_tech(self) -> None:
+        """Manually accumulate science for player civ (JVM skips player tech in headless)."""
         try:
             with open(self.save_path, 'r') as f:
                 raw = json.load(f)
@@ -290,19 +290,38 @@ class UncivEnv(gym.Env):
             if civ.get("civName") != "India":
                 continue
             tech = civ.get("tech", {})
-            if tech.get("currentTechResearch"):
-                return
+            science_history = tech.get("scienceOfLast8Turns") or []
+            science = float(science_history[-1]) if science_history else 0.0
+            if science <= 0:
+                break
+
             researched = set(tech.get("techsResearched") or [])
-            chosen = next(
-                (t for t, prereqs in sorted(self._tech_prereqs.items())
-                 if t not in researched and all(p in researched for p in prereqs)),
-                None,
-            )
-            if chosen is None:
-                return
-            tech["currentTechResearch"] = chosen
-            if not tech.get("techsInProgress"):
-                tech["techsInProgress"] = {chosen: 0}
+            in_progress = dict(tech.get("techsInProgress") or {})
+            current = next(iter(in_progress), None)
+            if not current:
+                current = next(
+                    (t for t, prereqs in sorted(self._tech_prereqs.items())
+                     if t not in researched and all(p in researched for p in prereqs)),
+                    None,
+                )
+                if not current:
+                    break
+                in_progress = {current: 0.0}
+
+            in_progress[current] = in_progress.get(current, 0.0) + science
+            cost = float(_TECH_COSTS.get(current, 60.0))
+            if in_progress[current] >= cost:
+                overflow = in_progress.pop(current) - cost
+                researched.add(current)
+                tech["techsResearched"] = sorted(researched)
+                next_tech = next(
+                    (t for t, prereqs in sorted(self._tech_prereqs.items())
+                     if t not in researched and all(p in researched for p in prereqs)),
+                    None,
+                )
+                in_progress = {next_tech: max(0.0, overflow)} if next_tech else {}
+
+            tech["techsInProgress"] = dict(in_progress) or None
             civ["tech"] = tech
             break
 

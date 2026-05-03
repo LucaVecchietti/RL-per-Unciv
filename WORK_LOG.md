@@ -5,6 +5,31 @@
 
 ---
 
+## [2026-05-03] — Sessione 25
+
+### Obiettivo sessione
+Fix bug persistente: `techs_mean: 2` anche con `_ensure_tech_queued`. Root cause: Unciv headless NON accumula scienza per il civ player in `nextTurn()` (solo AI civs).
+
+### File modificati
+- `src/envs/unciv_env.py` (modificato — `_ensure_tech_queued` rimossa; `_advance_tech` aggiunta; chiamata spostata DOPO `_advance_turn`; import `_TECH_COSTS` da state_parser)
+- `tests/test_env.py` (modificato — rimossi 2 test `_ensure_tech_queued`; aggiunti `test_advance_tech_accumulates_science` e `test_advance_tech_completes_tech`)
+- `WORK_LOG.md` (questo aggiornamento)
+
+### Fatto
+- Diagnosticato: `techsInProgress: {"Animal Husbandry": 0}` invariato su 9 turni consecutivi → Unciv non processa ricerca per player civ in headless server mode
+- `_advance_tech()` legge `scienceOfLast8Turns[-1]` (calcolato da Unciv correttamente) e accumula manualmente in `techsInProgress`
+- Quando scienza accumulata >= costo tech: tech aggiunta a `techsResearched`, prossima tech selezionata con overflow scienza
+- Chiamata DOPO `_advance_turn` per leggere scienza del turno appena processato
+
+### Test
+- [x] 84/84 test verdi
+
+### TODO prossima sessione
+1. Verificare che `techs_mean` salga >5 nel training
+2. Monitorare se `_TECH_COSTS` approssimazione è abbastanza precisa
+
+---
+
 ## [2026-05-03] — Sessione 24
 
 ### Obiettivo sessione
