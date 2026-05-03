@@ -5,6 +5,34 @@
 
 ---
 
+## [2026-05-03] — Sessione 21
+
+### Obiettivo sessione
+Implementare File 16 — `src/utils/ruleset_reader.py` + `tests/test_ruleset_reader.py`.
+
+### File modificati
+- `src/utils/ruleset_reader.py` (creato)
+- `tests/test_ruleset_reader.py` (creato)
+- `WORK_LOG.md` (questo aggiornamento)
+
+### Fatto
+- `ConstructionInfo` dataclass: `name`, `required_tech: Optional[str]`, `is_unit: bool`
+- `_load_jsonc(jar, path)`: strip commenti `//` e `/* */`, trailing commas → `json.loads`
+- `get_ancient_classical_techs(jar_path)`: legge Techs.json (era blocks), filtra era Ancient + Classical
+- `load_early_game_constructions(jar_path)`: filtra edifici (no wonders, no national wonders, no civ-unique, era constraint) + unità (unitType whitelist `{Sword, Scout, Civilian}`, no Great*, no civ-unique); ordine alfabetico edifici poi unità
+- 10 test richiesti dalla spec — tutti con mock JAR in-memory (no dipendenza da JAR reale)
+
+### Test
+- [x] 74/74 test verdi: `python -m pytest tests/ -v`
+- [x] 10/10 test `test_ruleset_reader.py` passano
+
+### TODO prossima sessione
+1. Implementare File 17 (`src/envs/unciv_env.py` — dynamic masking basato su tech + built_buildings, action space invariato Discrete(11))
+2. Poi File 18 (expanded action space Discrete(~19), obs (~57,), 9 flag edifici)
+3. Riavviare training dopo File 18 (checkpoint incompatibili con nuovo obs shape)
+
+---
+
 ## [2026-05-02] — Sessione 20
 
 ### Obiettivo sessione
