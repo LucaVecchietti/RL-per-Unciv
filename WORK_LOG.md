@@ -5,6 +5,23 @@
 
 ---
 
+## [2026-05-03] — Sessione 27
+
+### Obiettivo sessione
+Scrivere spec File 19 — Extended Metrics Logging.
+
+### File modificati
+- `md_file_x_claude_code/19_extended_metrics_logging.md` (creato — spec metriche estese)
+
+### Fatto
+- Spec completa: parsing nuovi campi `GameState` (tiles esplorate, territorio città, scienza/cultura per turno, risorse strategiche/luxury), contatori delta per-episodio in `UncivEnv`, logging in `callbacks.py`
+- Nessuna modifica a obs shape o action space — checkpoint compatibili
+
+### TODO prossima sessione
+1. Implementare File 19: modificare `state_parser.py`, `unciv_env.py`, `callbacks.py`, test
+
+---
+
 ## [2026-05-03] — Sessione 26
 
 ### Obiettivo sessione
