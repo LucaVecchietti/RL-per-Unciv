@@ -216,3 +216,12 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+#Unciv repo
+unciv/*
+
+# Project artifacts (runtime, non versionare)
+models/checkpoints/
+logs/
+saves/current_game_*.json
+GameSettings.json
