@@ -5,6 +5,37 @@
 
 ---
 
+## [2026-05-03] — Sessione 22
+
+### Obiettivo sessione
+Implementare File 17 — dynamic action masking in `unciv_env.py`.
+
+### File modificati
+- `src/envs/unciv_env.py` (modificato — import `load_early_game_constructions`, `_prereq_map`/`_unit_names`/`_building_names` in `__init__`, `action_masks()` riscritto)
+- `tests/test_env.py` (modificato — `test_action_masks_city_step` aggiornato, `_setup_masking` helper aggiunto, 8 nuovi test masking)
+- `WORK_LOG.md` (questo aggiornamento)
+
+### Fatto
+- `action_masks()` ora maschera dinamicamente per city step:
+  - Guard per `_current_state=None` → solo skip True
+  - Per ogni azione: verifica `requiredTech` in `state.techs_researched`
+  - Edifici: blocca se già costruiti (`built_buildings`)
+  - Unità: solo check tech
+  - `MOVE_*` sempre False in city step
+  - Skip sempre True — invariante anti-deadlock garantito
+- `_prereq_map` caricato una volta in `__init__` da `load_early_game_constructions(jar_path)`
+- `state_parser.py`: nessuna modifica — `built_buildings` già parsato da `builtBuildings`
+
+### Test
+- [x] 82/82 test verdi: `python -m pytest tests/ -v`
+- [x] 16/16 test `test_env.py` passano (8 nuovi masking test)
+
+### TODO prossima sessione
+1. Implementare File 18 — expanded action space (Discrete(~19), obs (~57,), 9 flag edifici)
+2. Riavviare training dopo File 18 (checkpoint incompatibili con nuovo obs shape)
+
+---
+
 ## [2026-05-03] — Sessione 21
 
 ### Obiettivo sessione

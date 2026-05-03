@@ -65,8 +65,24 @@ def test_step_output_shape(env):
         assert isinstance(term, bool)
 
 
-def test_action_masks_city_step(env):
+def _setup_masking(env, techs_researched=None, built_buildings=None) -> None:
+    """Set deterministic prereq_map + state for masking tests."""
+    env._prereq_map = {
+        "Monument": None, "Granary": "Pottery", "Library": "Writing",
+        "Barracks": "Bronze Working", "Settler": None, "Warrior": None,
+    }
+    env._building_names = {"Monument", "Granary", "Library", "Barracks"}
+    env._unit_names = {"Settler", "Warrior"}
+    env._current_state = GameState(
+        10, "India", 200, 5,
+        [CityState("Delhi", 3, "Monument", built_buildings or [], 200, 0)],
+        techs_researched or [], "Writing", 20, 20,
+    )
     env._step_type = "city"
+
+
+def test_action_masks_city_step(env):
+    _setup_masking(env, techs_researched=["Pottery", "Writing", "Bronze Working"])
     masks = env.action_masks()
     assert masks.shape == (11,)
     assert masks.dtype == bool
@@ -81,6 +97,52 @@ def test_action_masks_unit_step(env):
     assert not any(masks[0:6])
     assert masks[6]
     assert all(masks[7:11])
+
+
+def test_mask_monument_available_when_not_built(env):
+    _setup_masking(env, built_buildings=[])
+    assert env.action_masks()[0]
+
+
+def test_mask_monument_blocked_when_already_built(env):
+    _setup_masking(env, built_buildings=["Monument"])
+    assert not env.action_masks()[0]
+
+
+def test_mask_library_blocked_without_writing(env):
+    _setup_masking(env, techs_researched=[])
+    assert not env.action_masks()[2]
+
+
+def test_mask_library_available_with_writing(env):
+    _setup_masking(env, techs_researched=["Writing"])
+    assert env.action_masks()[2]
+
+
+def test_mask_skip_always_true_city_step(env):
+    _setup_masking(env, techs_researched=[], built_buildings=["Monument"])
+    assert env.action_masks()[6]
+
+
+def test_mask_move_false_in_city_step(env):
+    _setup_masking(env)
+    assert not any(env.action_masks()[7:11])
+
+
+def test_at_least_one_true_city_step(env):
+    _setup_masking(
+        env, techs_researched=[],
+        built_buildings=["Monument", "Granary", "Library", "Barracks"],
+    )
+    assert env.action_masks().any()
+
+
+def test_unit_step_mask_unchanged(env):
+    env._step_type = "unit"
+    masks = env.action_masks()
+    assert masks[6]
+    assert all(masks[7:11])
+    assert not any(masks[0:6])
 
 
 def test_per_entity_rotation_transitions_to_unit_step(env):

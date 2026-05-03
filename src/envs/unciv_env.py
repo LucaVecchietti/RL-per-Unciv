@@ -8,6 +8,7 @@ import json
 from src.parsers.state_parser import UncivStateParser, GameState, UnitState
 from src.utils.reward import compute_reward, compute_terminal_reward
 from src.utils.headless import UncivHeadless
+from src.utils.ruleset_reader import load_early_game_constructions
 
 # Fase 2.1: azioni 0-6 costruzione città, 7-10 movimento warrior
 ACTION_MAP = {
@@ -66,6 +67,11 @@ class UncivEnv(gym.Env):
         timeout = unciv_cfg.get("headless_timeout", 60)
         java_path = unciv_cfg.get("java_path", "java")
         self.headless = UncivHeadless(jar_path=jar_path, timeout=timeout, java_path=java_path)
+
+        constructions = load_early_game_constructions(jar_path)
+        self._prereq_map: dict[str, Optional[str]] = {c.name: c.required_tech for c in constructions}
+        self._unit_names: set[str] = {c.name for c in constructions if c.is_unit}
+        self._building_names: set[str] = {c.name for c in constructions if not c.is_unit}
 
         self.observation_space = gym.spaces.Box(
             low=0.0, high=1.0, shape=(52,), dtype=np.float32
@@ -140,13 +146,34 @@ class UncivEnv(gym.Env):
         return self._advance_game_turn()
 
     def action_masks(self) -> np.ndarray:
-        """Maschera azioni valide per MaskablePPO."""
-        mask = np.zeros(11, dtype=bool)
+        """Maschera azioni valide per MaskablePPO — masking dinamico basato su stato corrente."""
+        mask = np.zeros(len(ACTION_MAP), dtype=bool)
+        skip_idx = next(i for i, n in ACTION_MAP.items() if n is None)
+
         if self._step_type == "city":
-            mask[0:7] = True
+            if self._current_state is None:
+                mask[skip_idx] = True
+                return mask
+            state = self._current_state
+            city = state.cities[0] if state.cities else None
+            built = set(city.built_buildings) if city else set()
+            for i, name in ACTION_MAP.items():
+                if name is None:
+                    mask[i] = True
+                elif name.startswith("MOVE_"):
+                    mask[i] = False
+                else:
+                    req = self._prereq_map.get(name)
+                    tech_ok = req is None or req in state.techs_researched
+                    if name in self._building_names:
+                        mask[i] = tech_ok and name not in built
+                    else:
+                        mask[i] = tech_ok
         elif self._step_type == "unit":
-            mask[6] = True     # skip
-            mask[7:11] = True  # movimento
+            mask[skip_idx] = True
+            for i, name in ACTION_MAP.items():
+                if isinstance(name, str) and name.startswith("MOVE_"):
+                    mask[i] = True
         return mask
 
     def render(self) -> None:
