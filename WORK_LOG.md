@@ -5,6 +5,48 @@
 
 ---
 
+## [2026-05-03] — Sessione 23
+
+### Obiettivo sessione
+Implementare File 18 — expanded action space (Discrete(19), obs (57,), 9 flag edifici); correggere bug in `reward.py` e `callbacks.py`.
+
+### File modificati
+- `src/utils/ruleset_reader.py` (modificato — fix `_TARGET_ERAS` da `{"Ancient","Classical"}` a forma multi-era; aggiunti `uniqueTo` filter per edifici e unità; aggiunti "Lighthouse" a `_BUILDING_EXCLUDE`, "Swordsman" a `_UNIT_MISC_EXCLUDE`)
+- `src/parsers/state_parser.py` (modificato — `_TRACKED_BUILDINGS` da 6 a 9 flag; `_city_obs()` da 16→19 elementi; city 2 da 8→10 elementi; obs assert (52,)→(57,))
+- `src/envs/unciv_env.py` (modificato — ACTION_MAP dinamico da JAR in `__init__`; obs space (57,); action space `Discrete(len(ACTION_MAP))`; `_skip_idx`/`_move_start_idx` calcolati; `_compute_reward` passa `skip_action_idx=self._skip_idx`)
+- `src/utils/reward.py` (modificato — aggiunto parametro `skip_action_idx: int = 6`; fix body `if action == 6:` → `if action == skip_action_idx:`)
+- `src/utils/callbacks.py` (modificato — `_ACTION_NAMES` da 11 a 19 voci; docstring aggiornata)
+- `tests/test_env.py` (riscritto — shape (52,)→(57,), action count 11→19; `_setup_masking` ricostruisce ACTION_MAP deterministicamente; `_get_idx` helper; indici dinamici con `env._skip_idx`/`env._move_start_idx`; unit coord obs indices 48→53)
+- `tests/test_parser.py` (modificato — shape assert (52,)→(57,))
+- `tests/test_callbacks.py` (modificato — shape assert (11,)→(19,))
+- `CLAUDE.md` (modificato — contratti: obs (52,)→(57,), azioni 11→19)
+- `WORK_LOG.md` (questo aggiornamento)
+
+### Fatto
+- ACTION_MAP ora dinamico (caricato da JAR in `__init__`): 9 edifici + 5 unità + skip + 4 MOVE_* = 19 azioni
+- Obs espanso (52,)→(57,): 3 flag edifici extra in city1, gold/t + tiles_worked in city2
+- Bug fix `reward.py`: idle penalty ora usa `skip_action_idx` parametro, non hardcoded `6`
+- Bug fix `callbacks.py`: `_ACTION_NAMES` aggiornato a 19 voci per Fase 2.2c
+- Bug fix `ruleset_reader.py`: era names ("Ancient era" vs "Ancient"), uniqueTo filter, Lighthouse/Swordsman exclude
+
+### Problemi risolti
+- `_TARGET_ERAS` era `{"Ancient","Classical"}` ma il JAR usa `"Ancient era"` e `"Classical era"` → produceva solo 1 costruzione (Monument). Fix: supportare entrambi i formati.
+- `test_ruleset_reader.py` usa mock data con "Ancient" → soluzione: `_TARGET_ERAS` ora contiene entrambe le varianti.
+- Test env shapes e indici hardcoded → aggiornati con helper `_get_idx` e `env._skip_idx`/`env._move_start_idx`.
+
+### Test
+- [x] 78/82 test verdi: `python -m pytest tests/ -v`
+- [x] 4 failure pre-esistenti in `test_training.py` (ModuleNotFoundError: `sb3_contrib` non installato)
+- [x] 17/17 test `test_env.py` passano
+- [x] 10/10 test `test_ruleset_reader.py` passano
+
+### TODO prossima sessione
+1. Installare `sb3_contrib` (o fixare test_training.py per ambiente privo di sb3_contrib)
+2. Riavviare training con nuovo obs/action space — checkpoint precedenti incompatibili
+3. Aggiornare `ARCHITECTURE.md` con nuovo obs layout (57,) e action space (19)
+
+---
+
 ## [2026-05-03] — Sessione 22
 
 ### Obiettivo sessione

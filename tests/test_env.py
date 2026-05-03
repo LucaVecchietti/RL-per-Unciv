@@ -36,9 +36,14 @@ def _mock_state(units: list[UnitState] | None = None) -> GameState:
     )
 
 
+def _get_idx(env: UncivEnv, name) -> int:
+    """Lookup action index by name in env.ACTION_MAP."""
+    return next(i for i, n in env.ACTION_MAP.items() if n == name)
+
+
 def test_spaces(env):
-    assert env.observation_space.shape == (52,)
-    assert env.action_space.n == 11
+    assert env.observation_space.shape == (57,)
+    assert env.action_space.n == 19
 
 
 def test_env_rank_uses_separate_save_files(tmp_path):
@@ -60,19 +65,25 @@ def test_step_output_shape(env):
         mock_parse.return_value = mock_state
         env._current_state = mock_state
         obs, reward, term, trunc, info = env.step(0)
-        assert obs.shape == (52,)
+        assert obs.shape == (57,)
         assert isinstance(reward, float)
         assert isinstance(term, bool)
 
 
-def _setup_masking(env, techs_researched=None, built_buildings=None) -> None:
-    """Set deterministic prereq_map + state for masking tests."""
+def _setup_masking(env: UncivEnv, techs_researched=None, built_buildings=None) -> None:
+    """Set deterministic prereq_map + ACTION_MAP + state for masking tests."""
     env._prereq_map = {
         "Monument": None, "Granary": "Pottery", "Library": "Writing",
         "Barracks": "Bronze Working", "Settler": None, "Warrior": None,
     }
     env._building_names = {"Monument", "Granary", "Library", "Barracks"}
     env._unit_names = {"Settler", "Warrior"}
+    buildings = sorted(env._building_names)   # Barracks, Granary, Library, Monument
+    units = sorted(env._unit_names)            # Settler, Warrior
+    action_list = buildings + units + [None] + ["MOVE_NORTH", "MOVE_SOUTH", "MOVE_EAST", "MOVE_WEST"]
+    env.ACTION_MAP = {i: n for i, n in enumerate(action_list)}
+    env._skip_idx = action_list.index(None)
+    env._move_start_idx = env._skip_idx + 1
     env._current_state = GameState(
         10, "India", 200, 5,
         [CityState("Delhi", 3, "Monument", built_buildings or [], 200, 0)],
@@ -93,40 +104,42 @@ def test_action_masks_city_step(env):
 def test_action_masks_unit_step(env):
     env._step_type = "unit"
     masks = env.action_masks()
-    assert masks.shape == (11,)
-    assert not any(masks[0:6])
-    assert masks[6]
-    assert all(masks[7:11])
+    skip = env._skip_idx
+    move_s = env._move_start_idx
+    assert masks.shape == (len(env.ACTION_MAP),)
+    assert not any(masks[:skip])
+    assert masks[skip]
+    assert all(masks[move_s:move_s + 4])
 
 
 def test_mask_monument_available_when_not_built(env):
     _setup_masking(env, built_buildings=[])
-    assert env.action_masks()[0]
+    assert env.action_masks()[_get_idx(env, "Monument")]
 
 
 def test_mask_monument_blocked_when_already_built(env):
     _setup_masking(env, built_buildings=["Monument"])
-    assert not env.action_masks()[0]
+    assert not env.action_masks()[_get_idx(env, "Monument")]
 
 
 def test_mask_library_blocked_without_writing(env):
     _setup_masking(env, techs_researched=[])
-    assert not env.action_masks()[2]
+    assert not env.action_masks()[_get_idx(env, "Library")]
 
 
 def test_mask_library_available_with_writing(env):
     _setup_masking(env, techs_researched=["Writing"])
-    assert env.action_masks()[2]
+    assert env.action_masks()[_get_idx(env, "Library")]
 
 
 def test_mask_skip_always_true_city_step(env):
     _setup_masking(env, techs_researched=[], built_buildings=["Monument"])
-    assert env.action_masks()[6]
+    assert env.action_masks()[env._skip_idx]
 
 
 def test_mask_move_false_in_city_step(env):
     _setup_masking(env)
-    assert not any(env.action_masks()[7:11])
+    assert not any(env.action_masks()[env._move_start_idx:env._move_start_idx + 4])
 
 
 def test_at_least_one_true_city_step(env):
@@ -140,9 +153,11 @@ def test_at_least_one_true_city_step(env):
 def test_unit_step_mask_unchanged(env):
     env._step_type = "unit"
     masks = env.action_masks()
-    assert masks[6]
-    assert all(masks[7:11])
-    assert not any(masks[0:6])
+    skip = env._skip_idx
+    move_s = env._move_start_idx
+    assert masks[skip]
+    assert all(masks[move_s:move_s + 4])
+    assert not any(masks[:skip])
 
 
 def test_per_entity_rotation_transitions_to_unit_step(env):
@@ -157,7 +172,7 @@ def test_per_entity_rotation_transitions_to_unit_step(env):
         env._current_state = mock_state
         obs, reward, term, trunc, info = env.step(0)
 
-    assert obs.shape == (52,)
+    assert obs.shape == (57,)
     assert reward == 0.0
     assert term is False
     assert trunc is False
@@ -178,16 +193,16 @@ def test_per_entity_rotation_advances_turn_after_warrior(env):
         env._step_type = "unit"
         env._unit_rotation_index = 0
         env._pending_warriors = [warrior]
-        env._buffered_city_action = 5
-        obs, reward, term, trunc, info = env.step(6)  # skip
+        env._buffered_city_action = env._skip_idx
+        obs, reward, term, trunc, info = env.step(env._skip_idx)
 
-    assert obs.shape == (52,)
+    assert obs.shape == (57,)
     assert env._step_type == "city"
     mock_adv.assert_called_once()
 
 
 def test_obs_contains_selected_unit_coords(env):
-    """In unit step, obs[48-50] riflettono unità selezionata."""
+    """In unit step, obs[53-55] riflettono unità selezionata."""
     warrior = UnitState("Warrior", x=10, y=10, movement_points=2.0)
     mock_state = _mock_state(units=[warrior])
     env._current_state = mock_state
@@ -196,8 +211,8 @@ def test_obs_contains_selected_unit_coords(env):
     env._pending_warriors = [warrior]
 
     obs = env._get_obs()
-    assert obs.shape == (52,)
+    assert obs.shape == (57,)
     # x=10/20=0.5, y=10/20=0.5, movement=2/2=1.0
-    assert abs(obs[48] - 0.5) < 1e-5
-    assert abs(obs[49] - 0.5) < 1e-5
-    assert abs(obs[50] - 1.0) < 1e-5
+    assert abs(obs[53] - 0.5) < 1e-5
+    assert abs(obs[54] - 0.5) < 1e-5
+    assert abs(obs[55] - 1.0) < 1e-5

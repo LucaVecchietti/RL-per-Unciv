@@ -20,6 +20,7 @@ def compute_reward(
     curr: GameState,
     action: int,
     weights: dict = REWARD_WEIGHTS,
+    skip_action_idx: int = 6,
 ) -> float:
     """
     Calcola la reward per un singolo step.
@@ -27,8 +28,9 @@ def compute_reward(
     Args:
         prev: Stato al turno precedente (None al primo step).
         curr: Stato attuale.
-        action: Azione eseguita (0-6).
+        action: Azione eseguita.
         weights: Pesi reward — override da config se necessario.
+        skip_action_idx: Indice dell'azione skip/idle nell'ACTION_MAP corrente.
 
     Returns:
         reward: float, può essere negativa.
@@ -63,7 +65,7 @@ def compute_reward(
         reward += curr.happiness * w["happiness_penalty"]
 
     # --- 6. Penalty azione idle (fine turno senza fare nulla) ---
-    if action == 6:
+    if action == skip_action_idx:
         reward -= w["idle_penalty"]
 
     # --- 7. Exploration reward (Fase 2.1) ---

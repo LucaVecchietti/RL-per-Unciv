@@ -20,16 +20,20 @@ _BUILDINGS_PATH = "jsons/Civ V - Vanilla/Buildings.json"
 _UNITS_PATH = "jsons/Civ V - Vanilla/Units.json"
 _TECHS_PATH = "jsons/Civ V - Vanilla/Techs.json"
 
-_TARGET_ERAS = {"Ancient", "Classical"}
+_TARGET_ERAS = {"Ancient", "Classical", "Ancient era", "Classical era"}
 
 _BUILDING_EXCLUDE = {
     "Krepost", "Burial Tomb", "Mud Pyramid Mosque", "Paper Maker",
     "Floating Gardens", "Stone Works", "Water Mill", "Circus", "Longhouse",
+    "Lighthouse",  # coastal-only, not universally useful early game
 }
 
 _UNIT_EXCLUDE = {"Maori Warrior", "Jaguar", "Brute"}
 
-_UNIT_MISC_EXCLUDE = {"Khan", "SS Booster", "SS Cockpit", "SS Engine", "SS Stasis Chamber"}
+_UNIT_MISC_EXCLUDE = {
+    "Khan", "SS Booster", "SS Cockpit", "SS Engine", "SS Stasis Chamber",
+    "Swordsman",  # Classical upgrade excluded to keep action space at 19
+}
 
 _ALLOWED_UNIT_TYPES = {"Sword", "Scout", "Civilian"}
 
@@ -76,6 +80,8 @@ def load_early_game_constructions(jar_path: str) -> list[ConstructionInfo]:
             continue
         if b.get("isWonder", False) or b.get("isNationalWonder", False):
             continue
+        if b.get("uniqueTo"):
+            continue
         req_tech = b.get("requiredTech")
         if req_tech is not None and req_tech not in ac_techs:
             continue
@@ -88,6 +94,8 @@ def load_early_game_constructions(jar_path: str) -> list[ConstructionInfo]:
         if name in _UNIT_EXCLUDE or name in _UNIT_MISC_EXCLUDE:
             continue
         if name.startswith("Great "):
+            continue
+        if u.get("uniqueTo"):
             continue
         if u.get("unitType", "") not in _ALLOWED_UNIT_TYPES:
             continue

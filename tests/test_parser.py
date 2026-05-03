@@ -62,5 +62,5 @@ def test_observation_vector_shape():
         map_width=20, map_height=20
     )
     obs = parser.to_observation_vector(mock_state)
-    assert obs.shape == (52,)
+    assert obs.shape == (57,)
     assert obs.dtype.name == "float32"

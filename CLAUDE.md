@@ -48,8 +48,8 @@ unciv-rl-agent/
 ## Contratti critici tra moduli
 | Contratto | Valore attuale | File coinvolti |
 |---|---|---|
-| Dimensione observation vector | `(52,)` float32 | `state_parser.py` ↔ `unciv_env.py` |
-| Numero azioni | `11` (Discrete) | `unciv_env.py` ↔ `train.py` |
+| Dimensione observation vector | `(57,)` float32 | `state_parser.py` ↔ `unciv_env.py` |
+| Numero azioni | `19` (Discrete) | `unciv_env.py` ↔ `train.py` |
 | Nome civilizzazione default | `"India"` | `state_parser.py`, `unciv_env.py` |
 | Save file per env | `saves/current_game_{rank}.json` | `unciv_env.py` ↔ `train.py` |
 | Advance turn | `UncivHeadless` in `_advance_turn` | `headless.py` ↔ `unciv_env.py` |

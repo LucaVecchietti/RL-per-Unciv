@@ -6,6 +6,12 @@ from pathlib import Path
 from dataclasses import dataclass, field
 from typing import Optional
 
+# Building flags tracked in observation vector (alphabetical — matches ACTION_MAP order)
+_TRACKED_BUILDINGS = [
+    "Barracks", "Colosseum", "Courthouse", "Granary", "Library",
+    "Monument", "Stable", "Temple", "Walls",
+]
+
 # Approximate science costs per tech (for progress normalization)
 _TECH_COSTS: dict[str, float] = {
     'Agriculture': 20, 'Pottery': 35, 'Animal Husbandry': 35,
@@ -287,30 +293,30 @@ class UncivStateParser:
             np.clip(len(state.cities) / 10.0, 0.0, 1.0),
         ]
 
-        # --- Città 1 (16) ---
+        # --- Città 1 (19) ---
         def _city_obs(c: CityState) -> list[float]:
             ft = max(c.food_threshold, 1.0)
             cc = max(c.current_construction_cost, 1.0)
-            return [
-                np.clip(c.population / 20.0, 0.0, 1.0),
-                np.clip(c.food_stored / ft, 0.0, 1.0),
-                np.clip(c.production_stored / cc, 0.0, 1.0),
-                np.clip(c.gold_per_turn / 20.0, 0.0, 1.0),
-                np.clip(c.food_per_turn / 20.0, 0.0, 1.0),
-                np.clip(c.production_per_turn / 20.0, 0.0, 1.0),
-                np.clip(len(c.built_buildings) / 20.0, 0.0, 1.0),
-                float('Monument' in c.built_buildings),
-                float('Granary' in c.built_buildings),
-                float('Library' in c.built_buildings),
-                float('Barracks' in c.built_buildings),
-                float('Walls' in c.built_buildings),
-                float('Market' in c.built_buildings),
-                np.clip(c.tiles_worked / 36.0, 0.0, 1.0),
-                np.clip(c.x / w, 0.0, 1.0),
-                np.clip(c.y / h, 0.0, 1.0),
-            ]
+            flags = [1.0 if b in c.built_buildings else 0.0 for b in _TRACKED_BUILDINGS]
+            return (
+                [
+                    np.clip(c.population / 20.0, 0.0, 1.0),
+                    np.clip(c.food_stored / ft, 0.0, 1.0),
+                    np.clip(c.production_stored / cc, 0.0, 1.0),
+                    np.clip(c.gold_per_turn / 20.0, 0.0, 1.0),
+                    np.clip(c.food_per_turn / 20.0, 0.0, 1.0),
+                    np.clip(c.production_per_turn / 20.0, 0.0, 1.0),
+                    np.clip(len(c.built_buildings) / 20.0, 0.0, 1.0),
+                ]
+                + flags
+                + [
+                    np.clip(c.tiles_worked / 36.0, 0.0, 1.0),
+                    np.clip(c.x / w, 0.0, 1.0),
+                    np.clip(c.y / h, 0.0, 1.0),
+                ]
+            )
 
-        obs += _city_obs(state.cities[0]) if state.cities else [0.0] * 16
+        obs += _city_obs(state.cities[0]) if state.cities else [0.0] * 19
 
         # --- Tech (8) ---
         tr = state.techs_researched
@@ -343,23 +349,25 @@ class UncivStateParser:
             np.clip(state.tiles_explored / total, 0.0, 1.0),
         ]
 
-        # --- Città 2 (8) ---
+        # --- Città 2 (10) — struttura città 1 senza building flags ---
         if len(state.cities) >= 2:
             c2 = state.cities[1]
             ft2 = max(c2.food_threshold, 1.0)
             cc2 = max(c2.current_construction_cost, 1.0)
             obs += [
                 np.clip(c2.population / 20.0, 0.0, 1.0),
+                np.clip(c2.food_stored / ft2, 0.0, 1.0),
+                np.clip(c2.production_stored / cc2, 0.0, 1.0),
+                np.clip(c2.gold_per_turn / 20.0, 0.0, 1.0),
                 np.clip(c2.food_per_turn / 20.0, 0.0, 1.0),
                 np.clip(c2.production_per_turn / 20.0, 0.0, 1.0),
                 np.clip(len(c2.built_buildings) / 20.0, 0.0, 1.0),
-                np.clip(c2.food_stored / ft2, 0.0, 1.0),
-                np.clip(c2.production_stored / cc2, 0.0, 1.0),
+                np.clip(c2.tiles_worked / 36.0, 0.0, 1.0),
                 np.clip(c2.x / w, 0.0, 1.0),
                 np.clip(c2.y / h, 0.0, 1.0),
             ]
         else:
-            obs += [0.0] * 8
+            obs += [0.0] * 10
 
         # --- Diplomazia (2) ---
         obs += [
@@ -376,5 +384,5 @@ class UncivStateParser:
         ]
 
         result = np.array(obs, dtype=np.float32)
-        assert result.shape == (52,), f"Expected (52,), got {result.shape}"
+        assert result.shape == (57,), f"Expected (57,), got {result.shape}"
         return result

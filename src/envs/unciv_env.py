@@ -10,20 +10,8 @@ from src.utils.reward import compute_reward, compute_terminal_reward
 from src.utils.headless import UncivHeadless
 from src.utils.ruleset_reader import load_early_game_constructions
 
-# Fase 2.1: azioni 0-6 costruzione città, 7-10 movimento warrior
-ACTION_MAP = {
-    0: "Monument",
-    1: "Granary",
-    2: "Library",
-    3: "Barracks",
-    4: "Settler",
-    5: "Warrior",
-    6: None,         # Fine turno / skip
-    7: "MOVE_NORTH",
-    8: "MOVE_SOUTH",
-    9: "MOVE_EAST",
-    10: "MOVE_WEST",
-}
+# ACTION_MAP built dynamically in __init__ from load_early_game_constructions().
+# Order: buildings (alphabetical) → units (alphabetical) → None (skip) → MOVE_*
 
 _MOVE_DELTA: dict[str, tuple[int, int]] = {
     "MOVE_NORTH": (0, 1),
@@ -35,10 +23,10 @@ _MOVE_DELTA: dict[str, tuple[int, int]] = {
 
 class UncivEnv(gym.Env):
     """
-    Ambiente Gymnasium per Unciv — Fase 2.1.
+    Ambiente Gymnasium per Unciv — Fase 2.2c.
 
-    Action space: Discrete(11) — costruzione città (0-6) + movimento warrior (7-10).
-    Observation space: Box(52,) float32.
+    Action space: Discrete(19) — edifici + unità (da ruleset JAR) + skip + MOVE_*.
+    Observation space: Box(57,) float32.
     Per-entity rotation: city step → warrior_0 step → ... → advance turn.
     """
 
@@ -73,10 +61,18 @@ class UncivEnv(gym.Env):
         self._unit_names: set[str] = {c.name for c in constructions if c.is_unit}
         self._building_names: set[str] = {c.name for c in constructions if not c.is_unit}
 
+        buildings = sorted(self._building_names)
+        units = sorted(self._unit_names)
+        action_list = buildings + units + [None] + ["MOVE_NORTH", "MOVE_SOUTH", "MOVE_EAST", "MOVE_WEST"]
+        self.ACTION_MAP: dict[int, Optional[str]] = {i: name for i, name in enumerate(action_list)}
+        self._skip_idx: int = action_list.index(None)
+        self._move_start_idx: int = self._skip_idx + 1
+        self._n_construction_actions: int = len(buildings) + len(units)
+
         self.observation_space = gym.spaces.Box(
-            low=0.0, high=1.0, shape=(52,), dtype=np.float32
+            low=0.0, high=1.0, shape=(57,), dtype=np.float32
         )
-        self.action_space = gym.spaces.Discrete(len(ACTION_MAP))
+        self.action_space = gym.spaces.Discrete(len(self.ACTION_MAP))
 
         # Stato interno
         self._current_state: Optional[GameState] = None
@@ -87,7 +83,7 @@ class UncivEnv(gym.Env):
         self._step_type: str = "city"
         self._unit_rotation_index: int = 0
         self._pending_warriors: list[UnitState] = []
-        self._buffered_city_action: int = 6
+        self._buffered_city_action: int = self._skip_idx
 
     # ------------------------------------------------------------------
     # Metodi obbligatori Gymnasium
@@ -147,17 +143,16 @@ class UncivEnv(gym.Env):
 
     def action_masks(self) -> np.ndarray:
         """Maschera azioni valide per MaskablePPO — masking dinamico basato su stato corrente."""
-        mask = np.zeros(len(ACTION_MAP), dtype=bool)
-        skip_idx = next(i for i, n in ACTION_MAP.items() if n is None)
+        mask = np.zeros(len(self.ACTION_MAP), dtype=bool)
 
         if self._step_type == "city":
             if self._current_state is None:
-                mask[skip_idx] = True
+                mask[self._skip_idx] = True
                 return mask
             state = self._current_state
             city = state.cities[0] if state.cities else None
             built = set(city.built_buildings) if city else set()
-            for i, name in ACTION_MAP.items():
+            for i, name in self.ACTION_MAP.items():
                 if name is None:
                     mask[i] = True
                 elif name.startswith("MOVE_"):
@@ -170,8 +165,8 @@ class UncivEnv(gym.Env):
                     else:
                         mask[i] = tech_ok
         elif self._step_type == "unit":
-            mask[skip_idx] = True
-            for i, name in ACTION_MAP.items():
+            mask[self._skip_idx] = True
+            for i, name in self.ACTION_MAP.items():
                 if isinstance(name, str) and name.startswith("MOVE_"):
                     mask[i] = True
         return mask
@@ -200,14 +195,9 @@ class UncivEnv(gym.Env):
         self.headless.start_new_game(self.template_path, self.save_path)
 
     def _apply_action(self, action: int) -> None:
-        """
-        Scrive l'azione costruzione (0-6) nel JSON di Unciv.
-        Ignorata per azioni di movimento (7-10).
-        """
-        if action >= 7:
-            return
-        construction = ACTION_MAP[action]
-        if construction is None:
+        """Scrive la costruzione scelta nel JSON di Unciv. No-op per skip e MOVE_*."""
+        name = self.ACTION_MAP.get(action)
+        if name is None or name.startswith("MOVE_"):
             return
 
         try:
@@ -219,20 +209,15 @@ class UncivEnv(gym.Env):
         for civ in raw.get("civilizations", []):
             if civ.get("civName") == "India":
                 if civ.get("cities"):
-                    civ["cities"][0]["cityConstructions"]["currentConstruction"] = construction
+                    civ["cities"][0]["cityConstructions"]["currentConstruction"] = name
                 break
 
         with open(self.save_path, 'w') as f:
             json.dump(raw, f)
 
     def _apply_movement(self, action: int, unit: UnitState) -> None:
-        """
-        Applica movimento warrior nel JSON spostando l'unità sulla tile di destinazione.
-        Azione 6 (skip) non modifica il JSON.
-        """
-        if action == 6:
-            return
-        direction = ACTION_MAP.get(action, "")
+        """Applica movimento warrior nel JSON (tile swap). No-op per skip e azioni non-MOVE."""
+        direction = self.ACTION_MAP.get(action, "")
         delta = _MOVE_DELTA.get(direction, (0, 0))
         if delta == (0, 0):
             return
@@ -297,7 +282,7 @@ class UncivEnv(gym.Env):
 
     def _compute_reward(self, prev: Optional[GameState], curr: GameState, action: int) -> float:
         """Delega a src/utils/reward.compute_reward."""
-        return compute_reward(prev, curr, action)
+        return compute_reward(prev, curr, action, skip_action_idx=self._skip_idx)
 
     def _is_terminated(self) -> bool:
         """L'episodio termina se happiness scende sotto soglia critica."""

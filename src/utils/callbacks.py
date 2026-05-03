@@ -34,9 +34,12 @@ class UncivMetricsCallback(BaseCallback):
         self._episode_infos.clear()
 
 
-# Fase 2.1 — 11 azioni: 0-6 costruzione + 7-10 movimento warrior
+# Fase 2.2c — 19 azioni: 9 edifici + 5 unità + skip + 4 MOVE_*
 _ACTION_NAMES = [
-    "Monument", "Granary", "Library", "Barracks", "Settler", "Warrior", "Idle",
+    "Barracks", "Colosseum", "Courthouse", "Granary", "Library",
+    "Monument", "Stable", "Temple", "Walls",
+    "Scout", "Settler", "Spearman", "Warrior", "Worker",
+    "Idle",
     "MOVE_NORTH", "MOVE_SOUTH", "MOVE_EAST", "MOVE_WEST",
 ]
 
@@ -44,7 +47,7 @@ _ACTION_NAMES = [
 class ActionDistributionCallback(BaseCallback):
     """
     Logga la distribuzione delle azioni per diagnosticare comportamenti degeneri.
-    Aggiornato per Fase 2.1: 11 azioni (0-10), include MOVE_*.
+    Aggiornato per Fase 2.2c: 19 azioni, include edifici, unità, MOVE_*.
     """
 
     def __init__(self, log_freq: int = 10_000, verbose: int = 0) -> None:
