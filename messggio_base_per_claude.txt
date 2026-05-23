@@ -1,11 +1,112 @@
-Leggi attentamente CLAUDE.md e WORK_LOG.md prima di fare qualsiasi cosa.
+<task>
+    <preconditions>
+        <read_files>
+            <file>CLAUDE.md</file>
+            <file>WORK_LOG.md</file>
+        </read_files>
+        <requirement>
+            Leggi attentamente entrambi i file prima di fare qualsiasi cosa.
+        </requirement>
+    </preconditions>
 
-Poi scrivi un riepilogo in questo formato esatto:
+    <instructions>
+        <summary_format>
+            Stato attuale: [cosa è già implementato secondo WORK_LOG.md]
+            Obiettivo sessione: [primo TODO della lista]
+            File che toccherò: [lista esplicita dei file]
+        </summary_format>
 
-Stato attuale: [cosa è già implementato secondo WORK_LOG.md]
-Obiettivo sessione: [primo TODO della lista]
-File che toccherò: [lista esplicita dei file]
+        <confirmation>
+            Aspetta la mia conferma prima di scrivere qualsiasi riga di codice.
+        </confirmation>
 
-Aspetta la mia conferma prima di scrivere qualsiasi riga di codice.
+        <implementation_rule>
+            Quando sarà il momento scrivi il file spec 19 relativo all'integrazione di nuove 
+            informazioni da loggare.
+        </implementation_rule>
+    </instructions>
+</task>
 
-Quando sarà il momento di implementare, lavora seguendo il file 06_monitoring.md e 07_unciv_setup.md.
+------
+
+<task>
+    <preconditions>
+        <read_files>
+            <file>CLAUDE.md</file>
+            <file>WORK_LOG.md</file>
+        </read_files>
+        <requirement>
+            Leggi attentamente entrambi i file prima di fare qualsiasi cosa.
+        </requirement>
+        <currents_state>
+            Concluso il training della fase 2.1
+        </current_state>
+    </preconditions>
+
+    <instructions>
+        <summary_format>
+            Stato attuale: [cosa è già implementato secondo WORK_LOG.md]
+            Obiettivo sessione: [primo TODO della lista]
+            File che toccherò: [lista esplicita dei file]
+        </summary_format>
+
+        <confirmation>
+            Aspetta la mia conferma prima di scrivere qualsiasi riga di codice.
+        </confirmation>
+
+        <implementation_rule>
+            Quando sarà il momento di implementare, segui il file:
+            <file>16_fase2_2a_ruleset_reader.md</file>
+        </implementation_rule>
+    </instructions>
+</task>
+
+-------------------
+
+<task>
+    <preconditions>
+        <read_files>
+            <file>CLAUDE.md</file>
+            <file>WORK_LOG.md</file>
+        </read_files>
+        <requirement>
+            Leggi attentamente entrambi i file prima di fare qualsiasi cosa.
+        </requirement>
+    </preconditions>
+
+    <instructions>
+        <summary_format>
+            Stato attuale: [cosa è già implementato secondo WORK_LOG.md]
+            Obiettivo sessione: [primo TODO della lista]
+            File che toccherò: [lista esplicita dei file]
+        </summary_format>
+
+        <logging_specification>
+            Implementa i log per raccogliere le seguenti metriche:
+            - Numero di tiles esplorate
+            - Numero di unità create per ogni tipo
+            - Numero di costruzioni completate
+            - Tipologia di costruzioni completate
+            - Numero di tiles che compongono il territorio delle città
+            - Tecnologie ricercate
+            - Oro totale ottenuto e oro medio per turno
+            - Scienza totale ottenuta e scienza media per turno
+            - Cultura totale ottenuta e cultura media per turno
+            - Quantità di risorse strategiche (es. cavalli, ferro)
+            - Quantità di risorse rare
+
+            Obiettivo:
+            Preparare il sistema di monitoring per le prossime fasi e
+            supportare la futura definizione e pianificazione delle reward.
+        </logging_specification>
+
+        <confirmation>
+            Aspetta la mia conferma prima di scrivere qualsiasi riga di codice.
+        </confirmation>
+
+        <implementation_rule>
+            Quando sarà il momento scrivi il file spec 19 relativo all'integrazione di nuove 
+            informazioni da loggare.
+        </implementation_rule>
+    </instructions>
+</task>

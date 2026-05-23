@@ -30,8 +30,8 @@ Python → scrive azione in JSON → java -jar Unciv_fork.jar --advance-turn --s
 ```powershell
 # Clona nella root del progetto RL
 cd "C:\Users\Luca Vecchietti\Desktop\RL-per-Unciv"
-git clone https://github.com/yairm210/Unciv.git unciv-src
-cd unciv-src
+git clone https://github.com/yairm210/Unciv.git unciv
+cd unciv
 ```
 
 Verificare che il build funzioni prima di modificare:
@@ -48,7 +48,7 @@ Output atteso: `unciv-src/desktop/build/libs/Unciv.jar`
 
 File rilevanti:
 ```
-unciv-src/
+unciv/
 ├── desktop/src/com/unciv/app/desktop/
 │   └── DesktopLauncher.kt   ← entry point desktop, QUI aggiungiamo il CLI
 ├── core/src/com/unciv/
@@ -64,7 +64,7 @@ esistente prima di aggiungere il nuovo ramo `--advance-turn`.
 
 ## Step 3 — Modificare DesktopLauncher.kt
 
-Aprire `unciv-src/desktop/src/com/unciv/app/desktop/DesktopLauncher.kt`.
+Aprire `unciv/desktop/src/com/unciv/app/desktop/DesktopLauncher.kt`.
 
 Trovare il blocco `fun main(args: Array<String>)` e aggiungere il ramo
 `--advance-turn` **prima** del ramo `headless` esistente:
@@ -121,7 +121,7 @@ fun main(args: Array<String>) {
 
 ## Step 4 — Aggiungere dipendenza headless LibGDX
 
-In `unciv-src/desktop/build.gradle.kts` verificare che sia presente
+In `unciv/desktop/build.gradle.kts` verificare che sia presente
 la dipendenza `gdx-backend-headless`. Se mancante, aggiungerla:
 
 ```kotlin
