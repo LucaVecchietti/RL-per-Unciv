@@ -5,6 +5,36 @@
 
 ---
 
+## [2026-05-24] — Sessione 37
+
+### Obiettivo sessione
+Fix crash training su azione Improve: `TimeoutError: JVM server timeout/EOF dopo 60s`.
+
+### Problema
+Durante il training di validazione, l'azione `Improve` su un caso specifico di tile/risorsa manda il server JVM in timeout/EOF (blocco o morte) → `_read_protocol_response` solleva e il training crasha. Lo smoke C3 funzionava solo sul caso craftato (Iron/Hills); su un Worker reale (Wheat→Farm) funziona, quindi il crash è su un caso non riprodotto facilmente.
+
+### File modificati
+- `src/utils/headless.py` (modificato — `_send_command` cattura `TimeoutError` e restituisce `"error timeout"`: l'azione-unità diventa no-op invece di crashare; la JVM, già terminata, viene riavviata al comando successivo da `_ensure_running`)
+- `src/envs/unciv_env.py` (modificato — `Improve` mascherata solo per Worker **su un tile-risorsa** Strategic/Luxury → meno chiamate improve, meno probabilità del caso che crasha)
+- `tests/test_env.py` (modificato — test masking improve su/fuori risorsa)
+
+### Fatto
+- **Resilienza**: un timeout/morte JVM su move/found/improve/legalmoves ora è un no-op (no crash training); `advance` invariato (la JVM morta viene comunque riavviata al prossimo `_ensure_running`).
+- **Masking più stretto**: l'agente può fare `Improve` solo quando il Worker è su un tile-risorsa (coerente con C3 = connettere strategiche/luxury; i miglioramenti generici sono scope File 23/Opzione B).
+- Nessun rebuild JAR: modifiche solo Python (comando Kotlin `improve` invariato).
+
+### Test
+- [x] 125/125 test verdi: `.venv\Scripts\python -m pytest tests/ -q`
+
+### Note / rischi
+- Il caso esatto che blocca `improve` nel motore non è stato isolato (difficile da riprodurre); è contenuto (no-op) ma se un tile-risorsa lo triggera deterministicamente costa ~60s di stallo per occorrenza. Da rivedere quando si implementa il File 23 (gestione miglioramenti più robusta).
+
+### TODO prossima sessione
+1. Ripetere il **training di validazione** C1+C2+C3 (ora senza crash su Improve); monitorare `fps` (eventuali stalli da timeout) e le metriche C1/C2/C3.
+2. Se stabile → implementare File 23 (Opzione B). Valutare timeout headless più basso se gli stalli sono frequenti.
+
+---
+
 ## [2026-05-24] — Sessione 36
 
 ### Obiettivo sessione

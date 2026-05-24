@@ -407,17 +407,32 @@ def test_apply_found_city_increments_counter(env):
 
 # --- File 22 (C3) — miglioramenti Worker ---
 
-def test_improve_mask_for_worker(env):
-    """Improve valido in unit step solo per i Worker."""
+def test_improve_mask_for_worker_on_resource(env):
+    """Improve valido in unit step per un Worker SOLO se è su un tile-risorsa."""
     worker = UnitState("Worker", x=0, y=0, movement_points=2.0, id=12)
+    state = _mock_state(units=[worker])
+    state.resource_tiles = {(0, 0): "Strategic"}
     env._step_type = "unit"
     env._pending_units = [worker]
     env._unit_rotation_index = 0
-    env._current_state = _mock_state(units=[worker])
+    env._current_state = state
     with patch.object(env.headless, "legal_moves", return_value=[]):
         masks = env.action_masks()
     assert masks[env._improve_idx]
     assert not masks[env._found_city_idx]  # un Worker non fonda città
+
+
+def test_improve_mask_off_when_worker_not_on_resource(env):
+    """Senza risorsa sul tile, Improve non è valido (evita no-op/crash)."""
+    worker = UnitState("Worker", x=5, y=5, movement_points=2.0, id=12)
+    state = _mock_state(units=[worker])  # resource_tiles vuoto
+    env._step_type = "unit"
+    env._pending_units = [worker]
+    env._unit_rotation_index = 0
+    env._current_state = state
+    with patch.object(env.headless, "legal_moves", return_value=[]):
+        masks = env.action_masks()
+    assert not masks[env._improve_idx]
 
 
 def test_apply_improve_increments_counter(env):

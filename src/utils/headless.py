@@ -155,7 +155,13 @@ class UncivHeadless:
             self._ensure_running()
             self._process.stdin.write(command + "\n")
             self._process.stdin.flush()
-            return self._read_protocol_response()
+            try:
+                return self._read_protocol_response()
+            except TimeoutError:
+                # JVM bloccata o morta su questo comando: è già stata terminata
+                # (verrà riavviata al prossimo comando). Restituisce un esito di errore
+                # così il chiamante tratta l'azione come no-op → il training non crasha.
+                return "error timeout"
 
     def move_unit(self, save_path: Path, unit_id: int, clock: int) -> dict:
         """

@@ -261,8 +261,8 @@ class UncivEnv(gym.Env):
                 # FoundCity valido solo per i Settler
                 if unit.name == "Settler":
                     mask[self._found_city_idx] = True
-                # Improve valido solo per i Worker
-                if unit.name == "Worker":
+                # Improve valido solo per i Worker su un tile-risorsa (Strategic/Luxury)
+                if unit.name == "Worker" and (unit.x, unit.y) in self._current_state.resource_tiles:
                     mask[self._improve_idx] = True
         return mask
 
