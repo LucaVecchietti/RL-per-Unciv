@@ -122,6 +122,9 @@ class GameState:
     stored_culture: float = 0.0
     # File 22 (C2) — posizioni risorse Strategic/Luxury: {(x, y): tipo}
     resource_tiles: dict = field(default_factory=dict)
+    # File 22 (C3) — risorse connesse (nel territorio + miglioramento giusto costruito)
+    connected_strategic: int = 0
+    connected_luxury: int = 0
 
 
 class UncivStateParser:
@@ -130,10 +133,17 @@ class UncivStateParser:
     e lo converte in strutture dati Python usabili dall'ambiente RL.
     """
 
-    def __init__(self, player_civ: str = "India", resource_types: Optional[dict] = None) -> None:
+    def __init__(
+        self,
+        player_civ: str = "India",
+        resource_types: Optional[dict] = None,
+        resource_improvements: Optional[dict] = None,
+    ) -> None:
         self.player_civ = player_civ
         # Mappa nome risorsa → tipo (Strategic/Luxury/Bonus), dal ruleset JAR
         self.resource_types: dict = resource_types or {}
+        # Mappa nome risorsa → miglioramento che la connette (es. Iron→Mine)
+        self.resource_improvements: dict = resource_improvements or {}
 
     def load(self, path: str | Path) -> dict:
         """Carica il file JSON raw, gestendo sia plain che gzip."""
@@ -211,28 +221,40 @@ class UncivStateParser:
         )
         units = self._parse_units(tile_list)
 
-        # File 22 (C2) — posizioni risorse Strategic/Luxury (tipo dal ruleset)
+        # File 22 (C2/C3) — posizioni risorse Strategic/Luxury (tipo dal ruleset) e quali sono connesse
         resource_tiles: dict[tuple[int, int], str] = {}
+        resource_connected: set[tuple[int, int]] = set()
         for t in tile_list:
             res = t.get('resource')
             if not res:
                 continue
             rtype = self.resource_types.get(res, '')
-            if rtype in ('Strategic', 'Luxury'):
-                pos = t.get('position', {})
-                resource_tiles[(int(pos.get('x', 0)), int(pos.get('y', 0)))] = rtype
+            if rtype not in ('Strategic', 'Luxury'):
+                continue
+            pos = t.get('position', {})
+            key = (int(pos.get('x', 0)), int(pos.get('y', 0)))
+            resource_tiles[key] = rtype
+            conn_imp = self.resource_improvements.get(res)
+            if conn_imp and t.get('improvement') == conn_imp:
+                resource_connected.add(key)
 
-        # Conteggio risorse nel territorio di ogni città
+        # Conteggio risorse nel territorio di ogni città (totali e connesse)
+        connected_strategic = connected_luxury = 0
         for cr, cs in zip(civ.get('cities', []), cities):
             strat = lux = 0
             for tp in cr.get('tiles', []):
                 if not isinstance(tp, dict):
                     continue
-                rt = resource_tiles.get((int(tp.get('x', 0)), int(tp.get('y', 0))))
+                key = (int(tp.get('x', 0)), int(tp.get('y', 0)))
+                rt = resource_tiles.get(key)
                 if rt == 'Strategic':
                     strat += 1
+                    if key in resource_connected:
+                        connected_strategic += 1
                 elif rt == 'Luxury':
                     lux += 1
+                    if key in resource_connected:
+                        connected_luxury += 1
             cs.territory_strategic = strat
             cs.territory_luxury = lux
 
@@ -271,6 +293,8 @@ class UncivStateParser:
             luxury_resources=luxury_resources,
             stored_culture=stored_culture,
             resource_tiles=resource_tiles,
+            connected_strategic=connected_strategic,
+            connected_luxury=connected_luxury,
         )
 
     def _find_player_civ(self, raw: dict) -> dict:

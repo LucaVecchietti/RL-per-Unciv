@@ -16,10 +16,12 @@ class UncivHeadless:
 
     Protocol:
         Python → JVM:  "advance <path>\\n" | "move <path> <id> <clock>\\n"
-                       | "legalmoves <path> <id>\\n" | "foundcity <path> <id>\\n" | "quit\\n"
+                       | "legalmoves <path> <id>\\n" | "foundcity <path> <id>\\n"
+                       | "improve <path> <id>\\n" | "quit\\n"
         JVM → Python:  "READY\\n" (on startup) | "ok <turn>\\n"
                        | "moved <id> <x> <y> <movement>\\n" | "legal <clock>...\\n"
-                       | "founded <x> <y>\\n" | "illegal <reason>\\n" | "error <msg>\\n"
+                       | "founded <x> <y>\\n" | "improving <name> <turns>\\n"
+                       | "illegal <reason>\\n" | "error <msg>\\n"
     """
 
     def __init__(self, jar_path: str, timeout: int = 60, java_path: str = "java") -> None:
@@ -191,6 +193,21 @@ class UncivHeadless:
         if response.startswith("legal"):
             return [int(c) for c in response.split()[1:]]
         return []
+
+    def build_improvement(self, save_path: Path, unit_id: int) -> dict:
+        """
+        Fa costruire al Worker il miglioramento che connette la risorsa sul suo tile.
+
+        Returns:
+            dict: {"success": True, "improvement", "turns"} se avviato,
+                  altrimenti {"success": False, "reason": ...}.
+        """
+        save_path = Path(save_path)
+        response = self._send_command(f"improve {save_path.as_posix()} {unit_id}")
+        if response.startswith("improving "):
+            parts = response.split()
+            return {"success": True, "improvement": parts[1], "turns": int(parts[2])}
+        return {"success": False, "reason": response}
 
     def found_city(self, save_path: Path, unit_id: int) -> dict:
         """

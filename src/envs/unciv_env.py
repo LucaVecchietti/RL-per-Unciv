@@ -8,7 +8,12 @@ import json
 from src.parsers.state_parser import UncivStateParser, GameState, UnitState, _TECH_COSTS
 from src.utils.reward import compute_reward, compute_terminal_reward
 from src.utils.headless import UncivHeadless
-from src.utils.ruleset_reader import load_early_game_constructions, load_tech_prereqs, load_resource_types
+from src.utils.ruleset_reader import (
+    load_early_game_constructions,
+    load_tech_prereqs,
+    load_resource_types,
+    load_resource_improvements,
+)
 
 # ACTION_MAP built dynamically in __init__ from load_early_game_constructions().
 # Order: buildings (alphabetical) → units (alphabetical) → None (skip) → MOVE_*
@@ -27,9 +32,9 @@ def _count_by_name(units: list[UnitState]) -> dict[str, int]:
 
 class UncivEnv(gym.Env):
     """
-    Ambiente Gymnasium per Unciv — Fase 2.C (C1: espansione multi-città).
+    Ambiente Gymnasium per Unciv — Fase 2.C (espansione + risorse).
 
-    Action space: Discrete(22) — edifici + unità (da ruleset JAR) + skip + 6 direzioni hex + FoundCity.
+    Action space: Discrete(23) — edifici + unità + skip + 6 direzioni hex + FoundCity + Improve.
     Observation space: Box(61,) float32 (Città1 = città selezionata; +4 feature risorse C2).
     Per-entity rotation: città_0 step → … → unità_0 step → … → advance turn.
     Movimento e fondazione città delegati al motore Unciv.
@@ -62,8 +67,9 @@ class UncivEnv(gym.Env):
         self.headless = UncivHeadless(jar_path=jar_path, timeout=timeout, java_path=java_path)
 
         constructions = load_early_game_constructions(jar_path)
-        # File 22 (C2) — mappa risorsa→tipo dal ruleset, usata dal parser per le risorse
+        # File 22 (C2/C3) — mappe risorsa→tipo e risorsa→miglioramento dal ruleset
         self.parser.resource_types = load_resource_types(jar_path)
+        self.parser.resource_improvements = load_resource_improvements(jar_path)
         self._prereq_map: dict[str, Optional[str]] = {c.name: c.required_tech for c in constructions}
         self._tech_prereqs: dict[str, list[str]] = load_tech_prereqs(jar_path)
         self._unit_names: set[str] = {c.name for c in constructions if c.is_unit}
@@ -72,11 +78,12 @@ class UncivEnv(gym.Env):
         buildings = sorted(self._building_names)
         units = sorted(self._unit_names)
         move_names = [f"MOVE_{c}" for c in _MOVE_CLOCKS]
-        action_list = buildings + units + [None] + move_names + ["FoundCity"]
+        action_list = buildings + units + [None] + move_names + ["FoundCity", "Improve"]
         self.ACTION_MAP: dict[int, Optional[str]] = {i: name for i, name in enumerate(action_list)}
         self._skip_idx: int = action_list.index(None)
         self._move_start_idx: int = self._skip_idx + 1
         self._found_city_idx: int = action_list.index("FoundCity")
+        self._improve_idx: int = action_list.index("Improve")
         self._n_construction_actions: int = len(buildings) + len(units)
         # mappa indice azione → direzione hex (clock)
         self._action_to_clock: dict[int, int] = {
@@ -119,8 +126,9 @@ class UncivEnv(gym.Env):
         self._ep_units_stuck: int = 0
         self._ep_new_tiles: int = 0
 
-        # File 22 (C1) — espansione
+        # File 22 (C1/C3) — espansione e miglioramenti
         self._ep_cities_founded: int = 0
+        self._ep_improvements_built: int = 0
 
     # ------------------------------------------------------------------
     # Metodi obbligatori Gymnasium
@@ -151,6 +159,7 @@ class UncivEnv(gym.Env):
         self._ep_units_stuck = 0
         self._ep_new_tiles = 0
         self._ep_cities_founded = 0
+        self._ep_improvements_built = 0
         self._start_new_game()
         self._current_state = self.parser.parse(self.save_path)
         self._pending_cities = list(self._current_state.cities)
@@ -193,6 +202,8 @@ class UncivEnv(gym.Env):
         unit = self._pending_units[self._unit_rotation_index]
         if action == self._found_city_idx:
             self._apply_found_city(unit)
+        elif action == self._improve_idx:
+            self._apply_improve(unit)
         else:
             self._apply_movement(action, unit)
         self._unit_rotation_index += 1
@@ -224,7 +235,7 @@ class UncivEnv(gym.Env):
             for i, name in self.ACTION_MAP.items():
                 if name is None:
                     mask[i] = True
-                elif name == "FoundCity" or name.startswith("MOVE_"):
+                elif name == "FoundCity" or name == "Improve" or name.startswith("MOVE_"):
                     mask[i] = False
                 else:
                     req = self._prereq_map.get(name)
@@ -250,6 +261,9 @@ class UncivEnv(gym.Env):
                 # FoundCity valido solo per i Settler
                 if unit.name == "Settler":
                     mask[self._found_city_idx] = True
+                # Improve valido solo per i Worker
+                if unit.name == "Worker":
+                    mask[self._improve_idx] = True
         return mask
 
     def render(self) -> None:
@@ -326,6 +340,14 @@ class UncivEnv(gym.Env):
         if result.get("success"):
             self._ep_cities_founded += 1
 
+    def _apply_improve(self, unit: UnitState) -> None:
+        """Fa costruire al Worker il miglioramento che connette la risorsa sul tile. No-op se fallisce."""
+        if unit.id < 0:
+            return
+        result = self.headless.build_improvement(self.save_path, unit.id)
+        if result.get("success"):
+            self._ep_improvements_built += 1
+
     def _advance_game_turn(self) -> tuple[np.ndarray, float, bool, bool, dict]:
         """Avanza turno Unciv, calcola reward, restituisce output step."""
         self._prev_state = self._current_state
@@ -381,6 +403,9 @@ class UncivEnv(gym.Env):
             "cities_founded": self._ep_cities_founded,
             # File 22 (C2) — risorse nel territorio (Strategic + Luxury, tutte le città)
             "territory_resources": sum(c.territory_strategic + c.territory_luxury for c in curr.cities),
+            # File 22 (C3) — miglioramenti e risorse connesse
+            "improvements_built": self._ep_improvements_built,
+            "connected_resources": curr.connected_strategic + curr.connected_luxury,
         }
         return obs, reward, terminated, truncated, info
 

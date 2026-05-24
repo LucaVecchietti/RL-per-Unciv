@@ -43,7 +43,7 @@ def _get_idx(env: UncivEnv, name) -> int:
 
 def test_spaces(env):
     assert env.observation_space.shape == (61,)
-    assert env.action_space.n == 22
+    assert env.action_space.n == 23
 
 
 def test_env_rank_uses_separate_save_files(tmp_path):
@@ -403,6 +403,31 @@ def test_apply_found_city_increments_counter(env):
         env._apply_found_city(settler)
     mock_found.assert_called_once()
     assert env._ep_cities_founded == 1
+
+
+# --- File 22 (C3) — miglioramenti Worker ---
+
+def test_improve_mask_for_worker(env):
+    """Improve valido in unit step solo per i Worker."""
+    worker = UnitState("Worker", x=0, y=0, movement_points=2.0, id=12)
+    env._step_type = "unit"
+    env._pending_units = [worker]
+    env._unit_rotation_index = 0
+    env._current_state = _mock_state(units=[worker])
+    with patch.object(env.headless, "legal_moves", return_value=[]):
+        masks = env.action_masks()
+    assert masks[env._improve_idx]
+    assert not masks[env._found_city_idx]  # un Worker non fonda città
+
+
+def test_apply_improve_increments_counter(env):
+    worker = UnitState("Worker", x=0, y=0, movement_points=2.0, id=12)
+    env._ep_improvements_built = 0
+    with patch.object(env.headless, "build_improvement",
+                      return_value={"success": True, "improvement": "Mine", "turns": 5}) as m:
+        env._apply_improve(worker)
+    m.assert_called_once()
+    assert env._ep_improvements_built == 1
 
 
 # --- File 20 — fix costruzione ---

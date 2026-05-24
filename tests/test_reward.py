@@ -80,6 +80,19 @@ def test_resource_placement_bonus():
     assert reward >= 2 * REWARD_WEIGHTS["resource_placement"]
 
 
+def test_resource_connected_bonus():
+    """Connettere risorse (miglioramento costruito) dà il bonus resource_connected."""
+    prev = make_state()  # connected_strategic/luxury = 0
+    curr = GameState(
+        turn=11, current_player="India", gold=200, happiness=5,
+        cities=[CityState("Rome", 3, "Monument", [], 200, 0)],
+        techs_researched=["Agriculture"], current_tech="Writing",
+        map_width=20, map_height=20, connected_strategic=2,
+    )
+    reward = compute_reward(prev, curr, action=0)
+    assert reward >= 2 * REWARD_WEIGHTS["resource_connected"]
+
+
 def test_gold_increase_positive():
     prev = make_state(gold=100.0)
     curr = make_state(gold=200.0)

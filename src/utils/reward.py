@@ -14,6 +14,7 @@ REWARD_WEIGHTS = {
     "exploration":        0.3,
     "found_city":         5.0,
     "resource_placement": 2.0,
+    "resource_connected": 3.0,
 }
 
 
@@ -62,6 +63,12 @@ def compute_reward(
     curr_res = sum(c.territory_strategic + c.territory_luxury for c in curr.cities)
     if curr_res > prev_res:
         reward += (curr_res - prev_res) * w["resource_placement"]
+
+    # --- 2d. Risorse connesse: miglioramento costruito sulla risorsa in territorio (Fase C3) ---
+    prev_conn = prev.connected_strategic + prev.connected_luxury
+    curr_conn = curr.connected_strategic + curr.connected_luxury
+    if curr_conn > prev_conn:
+        reward += (curr_conn - prev_conn) * w["resource_connected"]
 
     # --- 3. Tecnologie scoperte ---
     new_techs = set(curr.techs_researched) - set(prev.techs_researched)

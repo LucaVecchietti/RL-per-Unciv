@@ -86,18 +86,21 @@ class UncivMetricsCallback(BaseCallback):
         self.logger.record("unciv/cities_founded_mean", np.mean([i.get("cities_founded", 0) for i in infos]))
         # File 22 (C2) — risorse nel territorio
         self.logger.record("unciv/territory_resources_mean", np.mean([i.get("territory_resources", 0) for i in infos]))
+        # File 22 (C3) — risorse connesse e miglioramenti
+        self.logger.record("unciv/connected_resources_mean", np.mean([i.get("connected_resources", 0) for i in infos]))
+        self.logger.record("unciv/improvements_built_mean", np.mean([i.get("improvements_built", 0) for i in infos]))
 
         self._episode_infos.clear()
 
 
-# Fase 2.C1 — 22 azioni: 9 edifici + 5 unità + skip + 6 direzioni hex + FoundCity
+# Fase 2.C — 23 azioni: 9 edifici + 5 unità + skip + 6 direzioni hex + FoundCity + Improve
 _ACTION_NAMES = [
     "Barracks", "Colosseum", "Courthouse", "Granary", "Library",
     "Monument", "Stable", "Temple", "Walls",
     "Scout", "Settler", "Spearman", "Warrior", "Worker",
     "Idle",
     "MOVE_2", "MOVE_4", "MOVE_6", "MOVE_8", "MOVE_10", "MOVE_12",
-    "FoundCity",
+    "FoundCity", "Improve",
 ]
 
 

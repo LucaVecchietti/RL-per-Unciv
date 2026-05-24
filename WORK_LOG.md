@@ -5,6 +5,50 @@
 
 ---
 
+## [2026-05-24] — Sessione 35
+
+### Obiettivo sessione
+Implementare la Fase C3 (File 22): Worker + miglioramenti → risorse connesse + reward.
+
+### File modificati
+- `unciv/Unciv/desktop/src/com/unciv/app/desktop/DesktopLauncher.kt` (comando `improve`; fork gitignored → solo locale)
+- `unciv/Unciv.jar` (ricompilato — NON in git)
+- `src/utils/ruleset_reader.py` (modificato — `load_resource_improvements`)
+- `src/utils/headless.py` (modificato — `build_improvement`)
+- `src/parsers/state_parser.py` (modificato — `resource_improvements` nel parser; `GameState.connected_strategic/luxury`; conteggio risorse connesse nel territorio)
+- `src/envs/unciv_env.py` (modificato — azione `Improve` (action 22→23), masking Worker, `_apply_improve`, carica resource_improvements, contatore improvements_built, info dict)
+- `src/utils/reward.py` (modificato — peso `resource_connected`, bonus su delta risorse connesse)
+- `config/default_config.yaml` (modificato — `reward.resource_connected: 3.0`)
+- `src/utils/callbacks.py` (modificato — 23 azioni; `connected_resources_mean`, `improvements_built_mean`)
+- `CLAUDE.md` (modificato — contratto azioni 22→23)
+- `tests/test_ruleset_reader.py`, `tests/test_parser.py`, `tests/test_env.py`, `tests/test_reward.py`, `tests/test_callbacks.py`
+
+### Fatto
+- **Kotlin `improve <path> <id>`**: costruisce il miglioramento che connette la risorsa sul tile del Worker (`ruleset.tileResources[tile.resource].improvement`) via `startWorkingOnImprovement`.
+- **env**: azione `Improve` (mascherata solo per Worker in unit step); `_apply_improve` via headless; contatore `improvements_built`.
+- **parser**: una risorsa è "connessa" se nel territorio di una città **e** il tile ha il miglioramento giusto costruito; `connected_strategic/luxury` in `GameState`.
+- **reward**: bonus `resource_connected` (3.0) sul delta di risorse connesse.
+
+### Findings importanti (validati con smoke sul JAR)
+- ✅ **Headless PROCESSA i miglioramenti del Worker del player**: smoke → `improving Mine 5`, dopo gli advance il tile ha `improvement: Mine` (rischio risolto, a differenza della scienza che andava accumulata a mano).
+- ⚠️ **`detailedCivResources` è `@Transient`** (Civilization.kt:103) → **non serializzato nel save** → leggerlo dà sempre vuoto (per questo `strategic/luxury_res_count` del File 19 erano sempre 0, NON per mancanza di connessione). Workaround: uso un **proxy serializzabile** (risorsa in territorio + miglioramento connettente costruito).
+
+### Test / validazione
+- [x] 124/124 test verdi: `.venv\Scripts\python -m pytest tests/ -q`
+- [x] Smoke end-to-end sul JAR: Worker su Iron(+Hills) in capitale → `improve` → Mine costruito → parser reale `connected_strategic == 1`.
+
+### Note / rischi
+- Action space 23 → checkpoint precedenti incompatibili (ripartire da zero).
+- Le metriche `strategic_res_count_mean`/`luxury_res_count_mean` (File 19, da `detailedCivResources`) restano sempre 0 (transient non serializzato): usare invece `connected_resources_mean` / `territory_resources_mean`.
+- Il Worker deve essere SUL tile-risorsa per costruire il miglioramento: l'agente impara muovi-worker (Fase B) → improve, guidato dall'obs risorse (C2).
+
+### TODO prossima sessione
+1. Riavviare training (obs 61, action 23) e verificare: `improvements_built_mean > 0`, `connected_resources_mean > 0`, niente crash.
+2. Eventuale tuning reward (bilanciare found_city / resource_placement / resource_connected) e tech-gating risorse.
+3. Eliminare gli script scratch in `Temp/`. Valutare di rimuovere il parsing morto di `detailedCivResources` (File 19).
+
+---
+
 ## [2026-05-24] — Sessione 34
 
 ### Obiettivo sessione

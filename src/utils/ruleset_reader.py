@@ -87,6 +87,22 @@ def load_resource_types(jar_path: str) -> dict[str, str]:
     return result
 
 
+def load_resource_improvements(jar_path: str) -> dict[str, str]:
+    """Return {resource_name: connecting_improvement} from TileResources.json (es. Iron→Mine)."""
+    with zipfile.ZipFile(jar_path, "r") as jar:
+        data = _load_jsonc(jar, _RESOURCES_PATH)
+    result: dict[str, str] = {}
+    for r in data:
+        name = r.get("name", "")
+        imp = r.get("improvement")
+        if not imp:
+            improved_by = r.get("improvedBy") or []
+            imp = improved_by[0] if improved_by else None
+        if name and imp:
+            result[name] = imp
+    return result
+
+
 def load_early_game_constructions(jar_path: str) -> list[ConstructionInfo]:
     """
     Read buildings + units from the Unciv JAR, return Ancient + Classical constructions.

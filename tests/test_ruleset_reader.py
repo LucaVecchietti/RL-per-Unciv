@@ -7,6 +7,7 @@ from src.utils.ruleset_reader import (
     ConstructionInfo,
     load_early_game_constructions,
     load_resource_types,
+    load_resource_improvements,
 )
 
 _MOCK_TECHS = [
@@ -82,10 +83,10 @@ _MOCK_UNITS = [
 
 
 _MOCK_RESOURCES = [
-    {"name": "Iron", "resourceType": "Strategic", "revealedBy": "Iron Working"},
-    {"name": "Horses", "resourceType": "Strategic", "revealedBy": "Animal Husbandry"},
-    {"name": "Gold Ore", "resourceType": "Luxury"},
-    {"name": "Wheat", "resourceType": "Bonus"},
+    {"name": "Iron", "resourceType": "Strategic", "revealedBy": "Iron Working", "improvement": "Mine"},
+    {"name": "Horses", "resourceType": "Strategic", "revealedBy": "Animal Husbandry", "improvement": "Pasture"},
+    {"name": "Gold Ore", "resourceType": "Luxury", "improvement": "Mine"},
+    {"name": "Wheat", "resourceType": "Bonus", "improvement": "Farm"},
 ]
 
 
@@ -106,6 +107,13 @@ def test_load_resource_types(mock_jar):
     assert rt["Horses"] == "Strategic"
     assert rt["Gold Ore"] == "Luxury"
     assert rt["Wheat"] == "Bonus"
+
+
+def test_load_resource_improvements(mock_jar):
+    ri = load_resource_improvements(mock_jar)
+    assert ri["Iron"] == "Mine"
+    assert ri["Horses"] == "Pasture"
+    assert ri["Wheat"] == "Farm"
 
 
 @pytest.fixture

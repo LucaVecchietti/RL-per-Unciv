@@ -250,3 +250,30 @@ def test_obs_resource_features():
     # obs[57]=territory_strategic/10=0.5 ; obs[58]=territory_luxury/10=0.2
     assert abs(obs[57] - 0.5) < 1e-5
     assert abs(obs[58] - 0.2) < 1e-5
+
+
+# --- File 22 (C3) — risorse connesse ---
+
+def test_connected_resources_counted():
+    import tempfile as _t
+    civ_extra = {"cities": [{
+        "name": "Delhi", "population": {"population": 1}, "cityConstructions": {},
+        "tiles": [{"x": 1, "y": 1}, {"x": 2, "y": 2}], "location": {"x": 0, "y": 0},
+    }]}
+    tiles = [
+        {"position": {"x": 1, "y": 1}, "resource": "Iron", "improvement": "Mine"},  # connessa
+        {"position": {"x": 2, "y": 2}, "resource": "Iron"},                          # non connessa
+    ]
+    raw = _civ_save(civ_extra, tile_list=tiles)
+    parser = UncivStateParser(
+        player_civ="India",
+        resource_types={"Iron": "Strategic"},
+        resource_improvements={"Iron": "Mine"},
+    )
+    with _t.NamedTemporaryFile(suffix=".json", mode='w', delete=False) as f:
+        json.dump(raw, f)
+        path = f.name
+    state = parser.parse(path)
+    assert state.cities[0].territory_strategic == 2
+    assert state.connected_strategic == 1
+    assert state.connected_luxury == 0

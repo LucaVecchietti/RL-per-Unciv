@@ -29,3 +29,4 @@ reward:
   exploration: 0.3                # reward per nuova tile esplorata
   found_city: 5.0                 # bonus per ogni nuova città fondata (Fase C1)
   resource_placement: 2.0         # bonus per tile-risorsa catturata nel territorio (Fase C2)
+  resource_connected: 3.0         # bonus per risorsa connessa (miglioramento costruito) (Fase C3)
