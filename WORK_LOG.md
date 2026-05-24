@@ -5,6 +5,43 @@
 
 ---
 
+## [2026-05-24] — Sessione 29
+
+### Obiettivo sessione
+Ricreare il venv, far ripartire il training, investigare l'anomalia `built_*=0`, pianificare i prossimi step (Fasi A/B/C).
+
+### File modificati
+- `config/default_config.yaml` (modificato — `java_path` da percorso JDK fisso a `"java"` su PATH)
+- `md_file_x_claude_code/20_fix_construction_and_stats.md` (creato — spec Fase A)
+- `md_file_x_claude_code/21_movement_rework.md` (creato — spec Fase B)
+- `md_file_x_claude_code/22_expansion_resources.md` (creato — spec Fase C)
+- `Temp/` (creato — script scratch di ispezione save, NON in git)
+
+### Fatto
+- **venv ricreato**: il `.venv` era costruito su un'altra macchina (`pyvenv.cfg` → utente "Luca Vecchietti", Python 3.13 assente qui). Ricreato con **Python 3.14.5**, reinstallato `requirements.txt` (torch 2.12.0, sb3-contrib 2.8.0, gymnasium 1.2.3, numpy 2.4.6, tensorboard 2.20.0). Ora `sb3_contrib` presente.
+- **Java mancante** (rimosso con la pulizia macchina): `config.java_path` portato a `"java"`; l'utente reinstalla JDK 21 via winget.
+- **Anomalia `built_*=0` / `trained_*=0` diagnosticata** (NON ancora fixata, solo pianificata):
+  - Costruzione: `_apply_action` scrive `cityConstructions.currentConstruction` (campo INESISTENTE); Unciv usa `constructionQueue[0]` (`CityConstructions.kt:74`). La scelta dell'agente non arriva mai al motore → non costruisce nulla.
+  - `statsHistory` decodificato con lettere sbagliate: è `CivRankingHistory` (punteggi classifica). Da `RankingType.kt`: C=Growth(cibo/turno), N=Population, P=Production, G=Gold totale, H=Happiness, W=Technologies, A=Culture(policy), S=Score. Quindi `culture_per_turn` leggeva il cibo, `gold_per_turn` la popolazione.
+- **Audit completo dei campi** scrittura/lettura Python vs nomi reali Unciv: corretti gold/population/builtBuildings/constructionQueue(read)/tech/diplomacy/proximity/units; errati `_apply_action`, `culture_per_turn`, `gold_per_turn`, normalizzazione coordinate hex (`x/width`), risorse (`detailedCivResources` vuoto → usare tile-level).
+- **Verifica sorgente Kotlin** per il piano movimento (6 vicini hex da `HexMath.clockPositionToHexcoordMap`; API `UnitMovement.moveToTile/canMoveTo/getDistanceToTiles`; `MapUnit.id`, `civ.units.getUnitById`, `tileMap.getIfTileExistsOrNull`, `Tile.neighbors` con world-wrap; protocollo `--server`) e per la Fase C (`Civilization.addCity` + `unit.destroy`, `Tile.canBeSettled`, `Tile.startWorkingOnImprovement`, `resource.revealedBy` → `tech.isResearched`).
+- **3 file di pianificazione creati** (Fasi A/B/C) con diagnosi, modifiche file-per-file, test e validazione.
+
+### Problemi incontrati
+- venv inutilizzabile (ABI cp313 vs Python 3.14) → ricreato.
+- Java assente → training non partiva (`WinError 2` su Popen JVM); risolto reinstallando JDK + `java_path: "java"`.
+
+### Test
+- [x] 94/94 test verdi (suite eseguita a inizio sessione dopo ricreazione venv)
+- Investigazione e pianificazione: nessuna modifica al codice di produzione (i fix sono pianificati nei File 20-22, non ancora implementati)
+
+### TODO prossima sessione
+1. **Implementare Fase A (File 20)**: fix `_apply_action` (`constructionQueue`) + decodifica `statsHistory` corretta + test; validare `built_*_mean > 0`
+2. Poi Fase B (File 21 — rework movimento) e Fase C (File 22 — espansione + risorse)
+3. Eliminare gli script scratch in `Temp/` quando non servono più
+
+---
+
 ## [2026-05-24] — Sessione 28
 
 ### Obiettivo sessione
