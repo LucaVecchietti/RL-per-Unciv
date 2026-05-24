@@ -1,117 +1,123 @@
-# File 23 — Worker completo: miglioramenti generali
+# File 23 — Worker completo: miglioramenti generali (Opzione B — azioni esplicite)
 
 ## Obiettivo
 
-Estendere l'azione `Improve` del Worker oltre la sola connessione delle risorse (Fase C3):
-permettere di costruire **miglioramenti di resa** (Farm, Mine, Trading Post, Lumber Mill, Camp…)
-e di **rimuovere feature** (Jungle/Forest/Marsh) anche su tile **senza** risorsa, così le città
-crescono e producono di più.
+Estendere le capacità del Worker oltre la sola connessione delle risorse (Fase C3):
+permettere di costruire **qualsiasi miglioramento rilevante** (Farm, Mine, Trading Post,
+Lumber Mill, Camp, Pasture, Plantation, Quarry, Fishing Boats…), **rimuovere feature**
+(Jungle/Forest/Marsh) e (estensione) costruire **strade**, dando il controllo all'agente.
 
-**Stato attuale (Fase C3):** `improve <path> <id>` costruisce SOLO il miglioramento che connette
-la risorsa sul tile (`ruleset.tileResources[tile.resource].improvement`). Su tile senza risorsa
-risponde `illegal no_resource_improvement`. Niente scelta tra miglioramenti, niente rimozione
-feature, niente strade.
+> **Scelta confermata dall'utente: Opzione B — set di azioni esplicite** (un'azione per tipo di
+> miglioramento), con masking dinamico di validità. L'Opzione A (auto-improve delegato al motore)
+> è scartata: si vuole che sia l'agente a scegliere *cosa* costruire.
 
-**Prerequisiti:** Fase C (File 22) completata. Movimento Worker (Fase B) funzionante.
+## ⚠️ Prerequisito: validazione a runtime PRIMA di implementare
 
----
+Prima di questa fase va eseguito un **training di validazione di C1+C2+C3** (obs `(61,)`,
+action `Discrete(23)`, JAR aggiornato) e verificato che:
+- nessun crash (fix protocollo headless Sessione 33),
+- `cities_founded_mean > 0`, `territory_resources_mean` cresce,
+- `improvements_built_mean > 0`, `connected_resources_mean > 0`,
+- `fps` accettabile (il masking preciso aggiunge round-trip).
 
-## Decisione di design (da confermare con l'utente)
-
-### Opzione A — Auto-improve generalizzato (CONSIGLIATA)
-Una sola azione `Improve` (già esistente, **action space invariato a 23**): il motore sceglie
-il **miglior miglioramento** per il tile del Worker (risorsa o resa o rimozione feature).
-- L'agente sceglie comunque **quale tile** (via movimento) e **quando** migliorare; il *cosa* lo
-  decide il motore (come per movimento/FoundCity, delegati al motore).
-- Pro: nessun cambio di contratto, semplice, coerente col resto del progetto, sfrutta la logica
-  del gioco (gestisce anche rimozione feature). Con: l'agente non sceglie il *tipo* di miglioramento.
-
-### Opzione B — Set di azioni esplicite
-Azioni separate: `BUILD_FARM`, `BUILD_MINE`, `BUILD_TRADING_POST`, `BUILD_ROAD`,
-`REMOVE_JUNGLE`, … con masking per validità (`unit.canBuildImprovement`).
-- Pro: controllo totale dell'agente. Con: **action space cresce molto**, masking complesso,
-  apprendimento più difficile, checkpoint da rifare.
-
-> Raccomandazione: **Opzione A**. Mantiene `Discrete(23)`, massimo riuso del motore.
-> L'Opzione B si può aggiungere in un secondo momento se serve controllo fine.
+Solo dopo questa conferma si implementa il File 23.
 
 ---
 
-## Implementazione (Opzione A)
+## Stato attuale (Fase C3)
 
-### Kotlin — generalizzare il comando `improve` (`DesktopLauncher.kt`)
-Oggi il ramo `improve` cerca solo `tile.resource`. Generalizzarlo a:
-1. Se il tile ha una risorsa con miglioramento connettente costruibile → costruisci quello
-   (comportamento attuale, prioritario).
-2. Altrimenti scegli il **miglior miglioramento** per il tile.
-
-Per il punto 2, due strade (verificare in implementazione):
-- **(a)** `WorkerAutomation.chooseImprovement(unit, tile, localUniqueCache)` → `TileImprovement?`
-  (vedi `WorkerAutomation.kt:305`). Se `private`, rendere accessibile nel fork (o usare
-  `automateWorkerAction` — sconsigliato perché muove anche l'unità).
-- **(b)** Euristica semplice: iterare `gameInfo.ruleset.tileImprovements.values`, filtrare con
-  `unit.canBuildImprovement(imp, tile)`, escludere strade, scegliere per resa (es. il primo
-  valido o quello con `improvementStats` migliore per il tile).
-
-Output: `improving <name> <turns>` | `illegal nothing_to_improve` | `error <msg>`.
-**Ricompilare il JAR.**
-
-### Python
-- `headless.build_improvement` (Fase C3): **invariato** (il comando resta `improve <path> <id>`).
-- `unciv_env.action_masks` (unit step): `Improve` valido per i Worker — **invariato**. (Già
-  abilitato solo per `name == "Worker"`.) Opzionale: abilitare solo se esiste un miglioramento
-  costruibile (richiederebbe una query extra → lasciare semplice, illegale gestito come no-op).
-- `_apply_improve`: invariato (incrementa `improvements_built`).
-
-### Reward (opzionale)
-- Le migliorie di resa sono già premiate **indirettamente** (più cibo/produzione → crescita pop
-  ed edifici completati, già in reward). Valutare un piccolo bonus diretto `improvement_built`
-  (es. 0.2) per incoraggiare l'attività del Worker, da bilanciare per non incentivare improving
-  inutile. Default: **nessun bonus diretto** (si parte con la reward indiretta).
-
-### Obs (opzionale)
-- Per aiutare l'agente a capire quando il Worker è su un tile migliorabile, si può aggiungere
-  1 feature: "tile dell'unità selezionata è migliorabile (no improvement, lavorabile)". Cambia
-  la shape (61→62). **Opzionale**: valutare solo se il training mostra che il Worker non impara
-  a migliorare senza questo segnale.
+`improve <path> <id>` (senza nome) costruisce SOLO il miglioramento che connette la risorsa sul
+tile. Azione Python singola `Improve` (indice `_improve_idx`, action space 23), mascherata per i
+Worker. Con l'Opzione B questa azione singola viene **sostituita** dal set `BUILD_<improvement>`.
 
 ---
 
-## File da modificare
+## Design (Opzione B)
 
-- `unciv/.../DesktopLauncher.kt` (generalizzare `improve`) + **ricompilare JAR**
-- (eventuale) `src/utils/reward.py` + `config` se si aggiunge `improvement_built`
-- (eventuale) `src/parsers/state_parser.py` + `unciv_env.py` se si aggiunge la feature obs
-- `tests/` (test del nuovo comportamento), `CLAUDE.md` (se cambiano contratti)
+### Spazio azioni
+- Rimuovere l'azione singola `Improve`.
+- Aggiungere N azioni `BUILD_<improvement>` generate **dinamicamente dal ruleset** (no hardcoding,
+  come per edifici/unità). `Discrete(23 - 1 + N)` = `Discrete(22 + N)`.
+- Le azioni sono valide **solo in unit step, solo per Worker**, e mascherate per validità reale
+  (vedi `legalimprovements`).
 
-> Se si sceglie l'Opzione A senza reward/obs extra: l'**unica** modifica è il Kotlin + rebuild
-> JAR; nessun cambio di contratto Python.
+### Quali miglioramenti includere (filtro in `ruleset_reader`)
+Leggere `jsons/Civ V - Vanilla/TileImprovements.json` e includere i miglioramenti "da Worker"
+early/standard, **escludendo**:
+- `City center`, `Barbarian encampment`, `Ancient ruins`, rovine/relitti;
+- miglioramenti da Grande Personaggio (Academy, Citadel, Manufactory, Customs House, Holy Site…)
+  — riconoscibili da `uniqueTo`/uniques o da `turnsToBuild` assente/0;
+- ferrovie/strade SE si rimanda la rete commerciale (Road può essere incluso o lasciato a una
+  fase strade dedicata — vedi Fuori scope);
+- miglioramenti con `techRequired` oltre Classical (coerente con il resto del progetto).
+Includere: Farm, Mine, Trading Post, Lumber Mill, Camp, Pasture, Plantation, Quarry,
+Fishing Boats, e le rimozioni feature (`Remove Jungle/Forest/Marsh`) — l'elenco effettivo deriva
+dal filtro, ordine alfabetico per indici stabili.
+
+> Verificare in implementazione i campi reali di `TileImprovements.json` (es. `name`,
+> `terrainsCanBeBuiltOn`, `techRequired`, `turnsToBuild`, `uniqueTo`, uniques) per il filtro.
+
+---
+
+## Implementazione
+
+### `src/utils/ruleset_reader.py`
+- `load_buildable_improvements(jar_path) -> list[str]`: nomi dei miglioramenti costruibili dal
+  Worker (filtro sopra), ordine alfabetico. (Eventuale dataclass con `required_tech` se serve
+  per il masking lato Python, ma la validità reale la dà il motore.)
+
+### Kotlin — `DesktopLauncher.kt` (rebuild JAR)
+- Cambiare `improve` per accettare il nome del miglioramento:
+  `improve <path> <unitId> <improvementName>` →
+  `imp = ruleset.tileImprovements[name]`; se `unit.canBuildImprovement(imp, tile)` →
+  `tile.startWorkingOnImprovement(imp, civ, unit)` → `improving <name> <turns>`, altrimenti
+  `illegal cannot_build`.
+- Nuovo comando `legalimprovements <path> <unitId>` → `legalimp <name> <name> …`: i miglioramenti
+  che il Worker può costruire sul tile corrente (iterare `ruleset.tileImprovements` filtrando con
+  `unit.canBuildImprovement`). Usato per il masking preciso (come `legalmoves`).
+
+### `src/utils/headless.py`
+- `build_improvement(save, unit_id, improvement_name) -> dict` (estende la firma C3 con il nome).
+- `legal_improvements(save, unit_id) -> list[str]`.
+
+### `src/envs/unciv_env.py`
+- ACTION_MAP: rimuovere `"Improve"`, aggiungere `BUILD_<imp>` (da `load_buildable_improvements`).
+  Aggiornare `_skip_idx`/`_move_start_idx`/`_found_city_idx` e nuovo `_build_action_map`
+  (indice azione → nome improvement).
+- `action_masks` unit step: per i Worker, query `headless.legal_improvements`, mascherare i
+  `BUILD_<imp>` legali (oltre a skip + direzioni legali). (Costo: +1 round-trip per Worker/step.)
+- `step` unit branch: se l'azione è un `BUILD_<imp>` → `_apply_improve(action, unit)` che chiama
+  `headless.build_improvement(save, id, nome)`. Contatore `improvements_built` invariato.
+- `action_masks` city step: i `BUILD_<imp>` sempre `False`.
+
+### `src/utils/reward.py` + `config`
+- `connected_resources` (C3) invariato. Opzionale `improvement_built` (piccolo bonus diretto,
+  es. 0.2) per incoraggiare l'attività; di default tenere solo la reward indiretta + connected.
+
+### `CLAUDE.md`
+- Aggiornare il contratto azioni `23` → `22 + N` (N = n. miglioramenti costruibili).
 
 ---
 
 ## Test richiesti
 
-- **Smoke JAR** (come per C3, con comando "esca" per il BOM dell'harness):
-  - Worker su tile **senza risorsa** ma migliorabile (es. Grassland) → `improve` → `improving Farm N`;
-    advance → tile ha `improvement` (verifica che il motore processi anche le migliorie di resa).
-  - Worker su tile **con feature** (Jungle) → `improve` → costruisce/rimuove come da motore.
-  - Worker su tile **risorsa** → comportamento C3 invariato (connette la risorsa).
-- **Python**: se si aggiunge reward/obs, relativi unit test; altrimenti i test C3 restano validi
-  (il comando Python non cambia firma).
-
----
+- `test_ruleset_reader`: `load_buildable_improvements` include Farm/Mine/Trading Post, esclude
+  City center e improvement da Grande Personaggio.
+- `test_headless`: `build_improvement` con nome (success/illegal); `legal_improvements` parsing.
+- `test_env`: action space `22+N`; `BUILD_*` mascherati solo per Worker e solo se legali (mock
+  `legal_improvements`); `_apply_improve(action, unit)` chiama headless col nome giusto.
+- **Smoke JAR** (con comando "esca" per il BOM dell'harness):
+  - Worker su Grassland → `legalimprovements` include Farm → `improve … Farm` → advance → tile
+    ha `improvement: Farm` (il motore processa anche le rese, non solo le risorse).
+  - Worker su tile risorsa → `improve … Mine` connette (C3 invariato).
 
 ## Validazione (runtime)
 
-- `improvements_built_mean` cresce anche in partite senza molte risorse (il Worker migliora resa).
-- Resa città (food/produzione per turno) e `population_mean` migliorano rispetto a C3.
-
----
+- L'agente costruisce vari miglioramenti (`improvements_built_mean` cresce anche senza risorse);
+  resa città e `population_mean` migliorano; distribuzione azioni `BUILD_*` non degenere.
 
 ## Fuori scope (estensioni future)
 
-- **Strade/ferrovie** e rete commerciale (connessione città → capitale): sotto-sistema a parte
-  (comando `buildroad`, logica di rete, reward su città connesse).
-- **Opzione B** (azioni esplicite per tipo di miglioramento) se serve controllo fine dell'agente.
-- **Automazione completa** del Worker (`automateWorkerAction`): toglie agency all'agente RL,
-  utile solo come baseline/confronto.
+- **Strade/ferrovie** + rete commerciale (città→capitale): comando `buildroad` + logica rete +
+  reward su città connesse. Da fare in una fase dedicata.
+- Miglioramenti da Grande Personaggio.

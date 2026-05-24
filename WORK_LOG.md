@@ -15,15 +15,16 @@ Pianificare il "Worker completo" (miglioramenti generali oltre la connessione ri
 
 ### Fatto
 - Scritta la spec File 23. Risposta alla domanda dell'utente: attualmente il Worker costruisce **solo** il miglioramento che connette la risorsa sul suo tile (C3), non miglioramenti di resa generici, rimozione feature o strade.
-- Design proposto: **Opzione A (consigliata)** — generalizzare l'azione `Improve` esistente (action space invariato a 23) delegando al motore la scelta del miglior miglioramento per il tile (`WorkerAutomation.chooseImprovement`, o euristica semplice); **Opzione B** — set di azioni esplicite (più controllo, action space molto più grande).
-- Con l'Opzione A senza reward/obs extra: unica modifica = Kotlin `improve` + rebuild JAR, nessun cambio di contratto Python. Strade/rete commerciale lasciate fuori scope.
+- **Scelta utente: Opzione B** — set di azioni esplicite `BUILD_<improvement>` (un'azione per tipo, masking dinamico via nuovo comando `legalimprovements`), action space `23 → 22 + N`. Opzione A (auto-improve delegato al motore) scartata.
+- File 23 aggiornato come guida d'implementazione dell'Opzione B (ruleset_reader `load_buildable_improvements`, Kotlin `improve <name>` + `legalimprovements`, headless, env, test, contratto). Strade/rete commerciale e improvement da Grande Personaggio lasciati fuori scope.
+- **Prerequisito messo nero su bianco: training di validazione di C1+C2+C3 PRIMA di implementare il File 23.**
 
 ### Test
 - N/A — sessione di pianificazione.
 
 ### TODO prossima sessione
-1. Decidere Opzione A vs B per il File 23, poi implementare.
-2. (Prioritario) Riavviare il training (obs 61, action 23) per validare a runtime C1+C2+C3.
+1. **(Prioritario) Training di validazione C1+C2+C3** (obs 61, action 23): no crash, `cities_founded_mean>0`, `territory_resources_mean` cresce, `improvements_built_mean>0`, `connected_resources_mean>0`, fps ok.
+2. Solo dopo: implementare File 23 (Opzione B — azioni esplicite Worker).
 
 ---
 
