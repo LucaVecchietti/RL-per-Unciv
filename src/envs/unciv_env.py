@@ -13,12 +13,8 @@ from src.utils.ruleset_reader import load_early_game_constructions, load_tech_pr
 # ACTION_MAP built dynamically in __init__ from load_early_game_constructions().
 # Order: buildings (alphabetical) → units (alphabetical) → None (skip) → MOVE_*
 
-_MOVE_DELTA: dict[str, tuple[int, int]] = {
-    "MOVE_NORTH": (0, 1),
-    "MOVE_SOUTH": (0, -1),
-    "MOVE_EAST": (1, 0),
-    "MOVE_WEST": (-1, 0),
-}
+# 6 vicini esagonali — clock positions di HexMath. L'azione MOVE_<c> muove di una casella.
+_MOVE_CLOCKS = [2, 4, 6, 8, 10, 12]
 
 
 def _count_by_name(units: list[UnitState]) -> dict[str, int]:
@@ -31,11 +27,12 @@ def _count_by_name(units: list[UnitState]) -> dict[str, int]:
 
 class UncivEnv(gym.Env):
     """
-    Ambiente Gymnasium per Unciv — Fase 2.2c.
+    Ambiente Gymnasium per Unciv — Fase 2.B.
 
-    Action space: Discrete(19) — edifici + unità (da ruleset JAR) + skip + MOVE_*.
+    Action space: Discrete(21) — edifici + unità (da ruleset JAR) + skip + 6 direzioni hex.
     Observation space: Box(57,) float32.
-    Per-entity rotation: city step → warrior_0 step → ... → advance turn.
+    Per-entity rotation: city step → unità_0 step → ... → advance turn (tutte le unità con MP>0).
+    Movimento delegato al motore Unciv (costo terreno, adiacenza hex, world-wrap).
     """
 
     metadata = {"render_modes": ["human", "rgb_array"]}
@@ -72,11 +69,16 @@ class UncivEnv(gym.Env):
 
         buildings = sorted(self._building_names)
         units = sorted(self._unit_names)
-        action_list = buildings + units + [None] + ["MOVE_NORTH", "MOVE_SOUTH", "MOVE_EAST", "MOVE_WEST"]
+        move_names = [f"MOVE_{c}" for c in _MOVE_CLOCKS]
+        action_list = buildings + units + [None] + move_names
         self.ACTION_MAP: dict[int, Optional[str]] = {i: name for i, name in enumerate(action_list)}
         self._skip_idx: int = action_list.index(None)
         self._move_start_idx: int = self._skip_idx + 1
         self._n_construction_actions: int = len(buildings) + len(units)
+        # mappa indice azione → direzione hex (clock)
+        self._action_to_clock: dict[int, int] = {
+            self._move_start_idx + i: c for i, c in enumerate(_MOVE_CLOCKS)
+        }
 
         self.observation_space = gym.spaces.Box(
             low=0.0, high=1.0, shape=(57,), dtype=np.float32
@@ -88,10 +90,10 @@ class UncivEnv(gym.Env):
         self._prev_state: Optional[GameState] = None
         self._episode_steps = 0
 
-        # Per-entity rotation (Fase 2.1)
+        # Per-entity rotation (Fase 2.1 / 2.B — tutte le unità)
         self._step_type: str = "city"
         self._unit_rotation_index: int = 0
-        self._pending_warriors: list[UnitState] = []
+        self._pending_units: list[UnitState] = []
         self._buffered_city_action: int = self._skip_idx
 
         # File 19 — contatori metriche per-episodio
@@ -100,6 +102,17 @@ class UncivEnv(gym.Env):
         self._ep_total_culture: float = 0.0
         self._ep_buildings_built: dict[str, int] = {}
         self._ep_units_built: dict[str, int] = {}
+
+        # File 21 — metriche movimento per-episodio
+        self._ep_moves_attempted: int = 0
+        self._ep_moves_succeeded: int = 0
+        self._ep_moves_illegal: int = 0
+        self._ep_move_cost_total: float = 0.0
+        self._ep_moved_by_type: dict[str, int] = {}
+        self._ep_legal_moves_total: int = 0
+        self._ep_legal_moves_count: int = 0
+        self._ep_units_stuck: int = 0
+        self._ep_new_tiles: int = 0
 
     # ------------------------------------------------------------------
     # Metodi obbligatori Gymnasium
@@ -111,13 +124,22 @@ class UncivEnv(gym.Env):
         self._episode_steps = 0
         self._step_type = "city"
         self._unit_rotation_index = 0
-        self._pending_warriors = []
+        self._pending_units = []
         self._buffered_city_action = 6
         self._ep_total_gold = 0.0
         self._ep_total_science = 0.0
         self._ep_total_culture = 0.0
         self._ep_buildings_built = {}
         self._ep_units_built = {}
+        self._ep_moves_attempted = 0
+        self._ep_moves_succeeded = 0
+        self._ep_moves_illegal = 0
+        self._ep_move_cost_total = 0.0
+        self._ep_moved_by_type = {}
+        self._ep_legal_moves_total = 0
+        self._ep_legal_moves_count = 0
+        self._ep_units_stuck = 0
+        self._ep_new_tiles = 0
         self._start_new_game()
         self._current_state = self.parser.parse(self.save_path)
         obs = self._get_obs()
@@ -138,11 +160,11 @@ class UncivEnv(gym.Env):
         if self._step_type == "city":
             self._buffered_city_action = action
             self._apply_action(action)
-            self._pending_warriors = [
+            self._pending_units = [
                 u for u in self._current_state.units
-                if u.name == "Warrior" and u.movement_points > 0
+                if u.movement_points > 0
             ]
-            if self._pending_warriors:
+            if self._pending_units:
                 self._step_type = "unit"
                 self._unit_rotation_index = 0
                 obs = self._get_obs()
@@ -150,11 +172,11 @@ class UncivEnv(gym.Env):
             return self._advance_game_turn()
 
         # Unit step
-        unit = self._pending_warriors[self._unit_rotation_index]
+        unit = self._pending_units[self._unit_rotation_index]
         self._apply_movement(action, unit)
         self._unit_rotation_index += 1
 
-        if self._unit_rotation_index < len(self._pending_warriors):
+        if self._unit_rotation_index < len(self._pending_units):
             obs = self._get_obs()
             return obs, 0.0, False, False, {"turn": self._current_state.turn, "step_type": "unit"}
 
@@ -186,10 +208,19 @@ class UncivEnv(gym.Env):
                     else:
                         mask[i] = tech_ok
         elif self._step_type == "unit":
-            mask[self._skip_idx] = True
-            for i, name in self.ACTION_MAP.items():
-                if isinstance(name, str) and name.startswith("MOVE_"):
-                    mask[i] = True
+            mask[self._skip_idx] = True  # skip sempre valido (anti-deadlock)
+            unit = None
+            if self._pending_units and self._unit_rotation_index < len(self._pending_units):
+                unit = self._pending_units[self._unit_rotation_index]
+            if unit is not None and unit.id >= 0:
+                legal = self.headless.legal_moves(self.save_path, unit.id)
+                self._ep_legal_moves_total += len(legal)
+                self._ep_legal_moves_count += 1
+                if not legal:
+                    self._ep_units_stuck += 1
+                for i, clock in self._action_to_clock.items():
+                    if clock in legal:
+                        mask[i] = True
         return mask
 
     def render(self) -> None:
@@ -241,35 +272,21 @@ class UncivEnv(gym.Env):
             json.dump(raw, f)
 
     def _apply_movement(self, action: int, unit: UnitState) -> None:
-        """Applica movimento warrior nel JSON (tile swap). No-op per skip e azioni non-MOVE."""
-        direction = self.ACTION_MAP.get(action, "")
-        delta = _MOVE_DELTA.get(direction, (0, 0))
-        if delta == (0, 0):
+        """Muove l'unità via il server headless (clock-based, costo terreno reale). No-op per skip."""
+        clock = self._action_to_clock.get(action)
+        if clock is None:
+            return  # skip o azione non di movimento
+        if unit.id < 0:
             return
-
-        try:
-            with open(self.save_path, 'r') as f:
-                raw = json.load(f)
-        except (FileNotFoundError, json.JSONDecodeError):
-            return
-
-        tile_list = raw.get('tileMap', {}).get('tileList', [])
-        new_x, new_y = unit.x + delta[0], unit.y + delta[1]
-        src_tile = dst_tile = None
-        for tile in tile_list:
-            pos = tile.get('position', {})
-            tx, ty = int(pos.get('x', -9999)), int(pos.get('y', -9999))
-            if tx == unit.x and ty == unit.y:
-                src_tile = tile
-            if tx == new_x and ty == new_y:
-                dst_tile = tile
-
-        if src_tile and dst_tile and 'militaryUnit' in src_tile:
-            u_data = src_tile.pop('militaryUnit')
-            u_data['currentMovement'] = max(0.0, float(u_data.get('currentMovement', 2.0)) - 1.0)
-            dst_tile['militaryUnit'] = u_data
-            with open(self.save_path, 'w') as f:
-                json.dump(raw, f)
+        self._ep_moves_attempted += 1
+        result = self.headless.move_unit(self.save_path, unit.id, clock)
+        if result.get("success"):
+            self._ep_moves_succeeded += 1
+            cost = max(0.0, unit.movement_points - float(result.get("movement_left", 0.0)))
+            self._ep_move_cost_total += cost
+            self._ep_moved_by_type[unit.name] = self._ep_moved_by_type.get(unit.name, 0) + 1
+        else:
+            self._ep_moves_illegal += 1
 
     def _advance_game_turn(self) -> tuple[np.ndarray, float, bool, bool, dict]:
         """Avanza turno Unciv, calcola reward, restituisce output step."""
@@ -309,6 +326,15 @@ class UncivEnv(gym.Env):
             "ep_total_culture": self._ep_total_culture,
             "ep_buildings_built": dict(self._ep_buildings_built),
             "ep_units_built": dict(self._ep_units_built),
+            # File 21 — metriche movimento
+            "moves_attempted": self._ep_moves_attempted,
+            "moves_succeeded": self._ep_moves_succeeded,
+            "moves_illegal": self._ep_moves_illegal,
+            "move_cost_mean": (self._ep_move_cost_total / self._ep_moves_succeeded) if self._ep_moves_succeeded else 0.0,
+            "moved_by_type": dict(self._ep_moved_by_type),
+            "units_stuck": self._ep_units_stuck,
+            "legal_moves_available": (self._ep_legal_moves_total / self._ep_legal_moves_count) if self._ep_legal_moves_count else 0.0,
+            "new_tiles_per_move": (self._ep_new_tiles / self._ep_moves_succeeded) if self._ep_moves_succeeded else 0.0,
         }
         return obs, reward, terminated, truncated, info
 
@@ -316,6 +342,7 @@ class UncivEnv(gym.Env):
         """Aggiorna i contatori per-episodio (File 19) confrontando stato precedente e corrente."""
         if prev is not None:
             self._ep_total_gold += max(0.0, curr.gold - prev.gold)
+            self._ep_new_tiles += max(0, curr.tiles_explored - prev.tiles_explored)
         self._ep_total_science += curr.science_per_turn
         self._ep_total_culture += curr.culture_per_turn
         if prev is None:
@@ -334,9 +361,9 @@ class UncivEnv(gym.Env):
     def _get_obs(self) -> np.ndarray:
         """Restituisce obs con unità selezionata se in unit step."""
         selected: Optional[UnitState] = None
-        if (self._step_type == "unit" and self._pending_warriors and
-                self._unit_rotation_index < len(self._pending_warriors)):
-            selected = self._pending_warriors[self._unit_rotation_index]
+        if (self._step_type == "unit" and self._pending_units and
+                self._unit_rotation_index < len(self._pending_units)):
+            selected = self._pending_units[self._unit_rotation_index]
         return self.parser.to_observation_vector(self._current_state, selected_unit=selected)
 
     def _advance_tech(self) -> None:

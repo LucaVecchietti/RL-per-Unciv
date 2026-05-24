@@ -15,8 +15,11 @@ class UncivHeadless:
     via a stdin/stdout command protocol — eliminating ~5s JVM startup per turn.
 
     Protocol:
-        Python → JVM:  "advance <path>\\n" | "quit\\n"
-        JVM → Python:  "READY\\n" (on startup) | "ok <turn>\\n" | "error <msg>\\n"
+        Python → JVM:  "advance <path>\\n" | "move <path> <id> <clock>\\n"
+                       | "legalmoves <path> <id>\\n" | "quit\\n"
+        JVM → Python:  "READY\\n" (on startup) | "ok <turn>\\n"
+                       | "moved <id> <x> <y> <movement>\\n" | "legal <clock>...\\n"
+                       | "illegal <reason>\\n" | "error <msg>\\n"
     """
 
     def __init__(self, jar_path: str, timeout: int = 60, java_path: str = "java") -> None:
@@ -122,6 +125,59 @@ class UncivHeadless:
                 raise RuntimeError(f"Unciv headless errore: {response[6:]}")
             if not response.startswith("ok "):
                 raise RuntimeError(f"Risposta JVM inattesa: {response!r}")
+
+    def _send_command(self, command: str) -> str:
+        """Invia un comando al server JVM persistente e restituisce la risposta (stripped)."""
+        with self._lock:
+            self._ensure_running()
+            self._process.stdin.write(command + "\n")
+            self._process.stdin.flush()
+            response = self._readline_timeout(self._process.stdout, self.timeout)
+            if response is None:
+                try:
+                    self._process.terminate()
+                except Exception:
+                    pass
+                self._process = None
+                raise TimeoutError(f"JVM server timeout dopo {self.timeout}s su: {command}")
+            return response.strip()
+
+    def move_unit(self, save_path: Path, unit_id: int, clock: int) -> dict:
+        """
+        Muove un'unità di una casella nella direzione `clock` (2,4,6,8,10,12) via il server.
+
+        Args:
+            save_path: file di salvataggio da aggiornare in-place.
+            unit_id: id dell'unità (campo `id` nel JSON).
+            clock: direzione esagonale (ora di orologio).
+
+        Returns:
+            dict: {"success": True, "x", "y", "movement_left"} se riuscito,
+                  altrimenti {"success": False, "reason": ...}.
+        """
+        save_path = Path(save_path)
+        response = self._send_command(f"move {save_path.as_posix()} {unit_id} {clock}")
+        if response.startswith("moved "):
+            parts = response.split()
+            return {
+                "success": True,
+                "x": int(parts[2]),
+                "y": int(parts[3]),
+                "movement_left": float(parts[4]),
+            }
+        if response.startswith("illegal"):
+            return {"success": False, "reason": response}
+        if response.startswith("error "):
+            return {"success": False, "reason": response[6:]}
+        return {"success": False, "reason": f"risposta inattesa: {response!r}"}
+
+    def legal_moves(self, save_path: Path, unit_id: int) -> list[int]:
+        """Restituisce le direzioni (clock) legali per l'unità, lista vuota se nessuna/errore."""
+        save_path = Path(save_path)
+        response = self._send_command(f"legalmoves {save_path.as_posix()} {unit_id}")
+        if response.startswith("legal"):
+            return [int(c) for c in response.split()[1:]]
+        return []
 
     def start_new_game(self, template_path: Path, dest_path: Path) -> None:
         """

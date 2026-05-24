@@ -185,3 +185,31 @@ def test_gold_per_turn_not_from_population_N():
 def test_stored_culture_parsed():
     state = _parse_save(_civ_save({"policies": {"storedCulture": 42}}))
     assert state.stored_culture == 42.0
+
+
+# --- File 21 — unit id + normalizzazione coordinate hex ---
+
+def test_unitstate_has_id():
+    tiles = [{
+        "position": {"x": 1, "y": 1},
+        "militaryUnit": {"owner": "India", "name": "Warrior", "currentMovement": 2, "id": 7},
+    }]
+    state = _parse_save(_civ_save(tile_list=tiles))
+    assert len(state.units) == 1
+    assert state.units[0].id == 7
+
+
+def test_coord_normalization_handles_negative():
+    from src.parsers.state_parser import GameState, UnitState
+    parser = UncivStateParser()
+    st = GameState(
+        turn=1, current_player="India", gold=0, happiness=5,
+        cities=[], techs_researched=[], current_tech=None,
+        map_width=23, map_height=15, map_radius=10, units=[],
+    )
+    sel = UnitState("Warrior", x=-10, y=0, movement_points=2.0, id=1)
+    obs = parser.to_observation_vector(st, selected_unit=sel)
+    assert obs.shape == (57,)
+    # x=-10, radius 10 → (-10/10 + 1)/2 = 0.0 ; y=0 → 0.5
+    assert abs(obs[53] - 0.0) < 1e-5
+    assert abs(obs[54] - 0.5) < 1e-5

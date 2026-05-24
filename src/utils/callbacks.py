@@ -68,16 +68,30 @@ class UncivMetricsCallback(BaseCallback):
             np.mean([sum(i.get("luxury_resources", {}).values()) for i in infos]),
         )
 
+        # File 21 — metriche movimento
+        self.logger.record("unciv/moves_attempted_mean",      np.mean([i.get("moves_attempted", 0)      for i in infos]))
+        self.logger.record("unciv/moves_succeeded_mean",      np.mean([i.get("moves_succeeded", 0)      for i in infos]))
+        self.logger.record("unciv/moves_illegal_mean",        np.mean([i.get("moves_illegal", 0)        for i in infos]))
+        self.logger.record("unciv/move_cost_mean",            np.mean([i.get("move_cost_mean", 0)       for i in infos]))
+        self.logger.record("unciv/units_stuck_mean",          np.mean([i.get("units_stuck", 0)          for i in infos]))
+        self.logger.record("unciv/legal_moves_available_mean", np.mean([i.get("legal_moves_available", 0) for i in infos]))
+        self.logger.record("unciv/new_tiles_per_move_mean",   np.mean([i.get("new_tiles_per_move", 0)   for i in infos]))
+        for u in ["Warrior", "Scout", "Settler", "Worker", "Spearman"]:
+            self.logger.record(
+                f"unciv/moved_{u.lower()}_mean",
+                np.mean([i.get("moved_by_type", {}).get(u, 0) for i in infos]),
+            )
+
         self._episode_infos.clear()
 
 
-# Fase 2.2c — 19 azioni: 9 edifici + 5 unità + skip + 4 MOVE_*
+# Fase 2.B — 21 azioni: 9 edifici + 5 unità + skip + 6 direzioni hex (clock)
 _ACTION_NAMES = [
     "Barracks", "Colosseum", "Courthouse", "Granary", "Library",
     "Monument", "Stable", "Temple", "Walls",
     "Scout", "Settler", "Spearman", "Warrior", "Worker",
     "Idle",
-    "MOVE_NORTH", "MOVE_SOUTH", "MOVE_EAST", "MOVE_WEST",
+    "MOVE_2", "MOVE_4", "MOVE_6", "MOVE_8", "MOVE_10", "MOVE_12",
 ]
 
 

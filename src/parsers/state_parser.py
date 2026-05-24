@@ -49,6 +49,7 @@ class UnitState:
     y: int
     movement_points: float
     health: int = 100
+    id: int = -1
 
 
 @dataclass
@@ -87,6 +88,7 @@ class GameState:
     current_tech: Optional[str]
     map_width: int
     map_height: int
+    map_radius: int = 10
     # Fase 2.0
     units: list[UnitState] = field(default_factory=list)
     tiles_explored: int = 0
@@ -183,6 +185,7 @@ class UncivStateParser:
         map_size = tile_map.get('mapParameters', {}).get('mapSize', {})
         map_width = int(map_size.get('width', 20))
         map_height = int(map_size.get('height', 20))
+        map_radius = int(map_size.get('radius', 10))
 
         total_tiles = len(tile_list)
         tiles_explored = sum(
@@ -209,6 +212,7 @@ class UncivStateParser:
             current_tech=current_tech,
             map_width=map_width,
             map_height=map_height,
+            map_radius=map_radius,
             units=units,
             tiles_explored=tiles_explored,
             total_tiles=total_tiles,
@@ -288,6 +292,7 @@ class UncivStateParser:
                         y=int(pos.get('y', 0)),
                         movement_points=float(u.get('currentMovement', 0.0)),
                         health=int(u.get('health', 100)),
+                        id=int(u.get('id', -1)),
                     ))
         return units
 
@@ -321,9 +326,12 @@ class UncivStateParser:
           [46-47] Diplomazia: n_known_civs, at_war
           [48-51] Unità selezionata: sel_x, sel_y, sel_movement, tiles_explored_ratio
         """
-        w = float(state.map_width) or 20.0
-        h = float(state.map_height) or 20.0
         total = float(state.total_tiles) or 1.0
+        r = float(state.map_radius) or 10.0
+
+        def _norm_coord(v: float) -> float:
+            # Coordinate hex centrate sull'origine (anche negative) → [0,1] via raggio mappa
+            return float(np.clip((v / r + 1.0) / 2.0, 0.0, 1.0))
 
         obs: list[float] = []
 
@@ -355,8 +363,8 @@ class UncivStateParser:
                 + flags
                 + [
                     np.clip(c.tiles_worked / 36.0, 0.0, 1.0),
-                    np.clip(c.x / w, 0.0, 1.0),
-                    np.clip(c.y / h, 0.0, 1.0),
+                    _norm_coord(c.x),
+                    _norm_coord(c.y),
                 ]
             )
 
@@ -386,10 +394,10 @@ class UncivStateParser:
             np.clip(len(warriors) / 10.0, 0.0, 1.0),
             np.clip(len(settlers) / 5.0, 0.0, 1.0),
             np.clip(len(other) / 10.0, 0.0, 1.0),
-            np.clip(wp.x / w, 0.0, 1.0) if wp else 0.0,
-            np.clip(wp.y / h, 0.0, 1.0) if wp else 0.0,
-            np.clip(sp.x / w, 0.0, 1.0) if sp else 0.0,
-            np.clip(sp.y / h, 0.0, 1.0) if sp else 0.0,
+            _norm_coord(wp.x) if wp else 0.0,
+            _norm_coord(wp.y) if wp else 0.0,
+            _norm_coord(sp.x) if sp else 0.0,
+            _norm_coord(sp.y) if sp else 0.0,
             np.clip(state.tiles_explored / total, 0.0, 1.0),
         ]
 
@@ -407,8 +415,8 @@ class UncivStateParser:
                 np.clip(c2.production_per_turn / 20.0, 0.0, 1.0),
                 np.clip(len(c2.built_buildings) / 20.0, 0.0, 1.0),
                 np.clip(c2.tiles_worked / 36.0, 0.0, 1.0),
-                np.clip(c2.x / w, 0.0, 1.0),
-                np.clip(c2.y / h, 0.0, 1.0),
+                _norm_coord(c2.x),
+                _norm_coord(c2.y),
             ]
         else:
             obs += [0.0] * 10
@@ -421,8 +429,8 @@ class UncivStateParser:
 
         # --- Unità selezionata (4) — usata da per-entity rotation in Fase 2.1 ---
         obs += [
-            np.clip(selected_unit.x / w, 0.0, 1.0) if selected_unit else 0.0,
-            np.clip(selected_unit.y / h, 0.0, 1.0) if selected_unit else 0.0,
+            _norm_coord(selected_unit.x) if selected_unit else 0.0,
+            _norm_coord(selected_unit.y) if selected_unit else 0.0,
             np.clip(selected_unit.movement_points / 2.0, 0.0, 1.0) if selected_unit else 0.0,
             np.clip(state.tiles_explored / total, 0.0, 1.0),
         ]

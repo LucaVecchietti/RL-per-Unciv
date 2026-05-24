@@ -5,6 +5,48 @@
 
 ---
 
+## [2026-05-24] — Sessione 31
+
+### Obiettivo sessione
+Implementare la Fase B (File 21): rework movimento delegato al motore Unciv.
+
+### File modificati
+- `unciv/Unciv/desktop/src/com/unciv/app/desktop/DesktopLauncher.kt` (modificato — comandi `move`/`legalmoves` nel server `--server`; il fork `unciv/Unciv/` è gitignored → modifica solo locale)
+- `unciv/Unciv.jar` (ricompilato — NON in git)
+- `src/utils/headless.py` (modificato — `_send_command`, `move_unit`, `legal_moves`)
+- `src/parsers/state_parser.py` (modificato — `UnitState.id`, `GameState.map_radius`, normalizzazione coordinate hex radius-based)
+- `src/envs/unciv_env.py` (modificato — rotation su tutte le unità con MP>0, 6 direzioni hex, action space 19→21, masking unit-step via `legal_moves`, `_apply_movement` via headless, metriche movimento)
+- `src/utils/callbacks.py` (modificato — `_ACTION_NAMES` a 21, metriche movimento)
+- `CLAUDE.md` (modificato — contratto azioni 19→21)
+- `tests/test_headless.py`, `tests/test_env.py`, `tests/test_parser.py`, `tests/test_callbacks.py` (modificati — nuovi test + adattati a 21 azioni / coord hex / masking via legal_moves)
+
+### Fatto
+- **Kotlin**: `move <path> <id> <clock>` → `getUnitById` + vicino via `getNeighborTileClockPosition` + `canMoveTo`/`moveToTile` (costo terreno reale), salva; `legalmoves <path> <id>` → direzioni hex legali. Ricompilato `Unciv.jar` (`gradlew desktop:dist`, JDK 21, BUILD SUCCESSFUL).
+- **headless.py**: `move_unit` → dict {success,x,y,movement_left}; `legal_moves` → lista clock.
+- **parser**: unità con `id`; coordinate normalizzate via raggio mappa (gestisce hex negativo, prima `x/width` sbagliato); `map_radius` in `GameState`.
+- **env**: per-entity rotation estesa a **tutte** le unità (militari + civili) con MP>0; azioni movimento = 6 direzioni hex (clock 2/4/6/8/10/12); `Discrete(19)→Discrete(21)`; masking unit-step **preciso** (interroga `legal_moves`); movimento via `headless.move_unit`. Metriche movimento per-episodio (attempted/succeeded/illegal, move_cost, moved_<tipo>, units_stuck, legal_moves_available, new_tiles_per_move).
+- **Scelte utente**: masking preciso (`legalmoves`), build JAR eseguita in sessione.
+
+### Test
+- [x] 106/106 test verdi: `.venv\Scripts\python -m pytest tests/ -v`
+- [x] Smoke test JAR: `moved 110 2 6 1.0` (Worker civile mosso, costo 2→1.0), `legal 4 8`/`legal 2 4 8`, `illegal cannot_move` (rifiuto corretto)
+
+### Problemi incontrati
+- venv/Java non nel PATH della sessione tool → usato path esplicito JDK 21 (`C:\Program Files\Eclipse Adoptium\jdk-21.0.11.10-hotspot`).
+- Primo smoke test con id obsoleti (`no_unit`): il training in esecuzione riscrive `current_game_*.json` di continuo → usato uno snapshot copiato in `Temp/` con id validi.
+
+### Note / rischi
+- Il masking preciso aggiunge ~1 round-trip `legalmoves` per unit-step + 1 `move` → con molte unità il training potrebbe rallentare. Da monitorare (`fps`); eventualmente passare a masking semplice.
+- Movimento: una azione = una casella (un vicino), il movimento residuo non viene riusato nello stesso turno (semplificazione).
+- Action space 21 → checkpoint precedenti incompatibili (ripartire da zero, comunque necessario dopo Fase A).
+
+### TODO prossima sessione
+1. **Validare a runtime** (riavviare training con nuovo JAR): `move_cost_mean ≠ 1` (costo terreno), `moved_settler/scout/worker_mean > 0`, `moves_illegal_mean` basso, `fps` accettabile.
+2. Se ok → **Fase C (File 22)**: espansione multi-città + risorse.
+3. Eliminare gli script scratch in `Temp/`.
+
+---
+
 ## [2026-05-24] — Sessione 30
 
 ### Obiettivo sessione

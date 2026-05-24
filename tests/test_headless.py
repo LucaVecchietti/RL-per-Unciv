@@ -157,6 +157,45 @@ def test_advance_turn_skips_log_lines_before_ready(headless, tmp_path):
         headless.advance_turn(save)
 
 
+def test_move_unit_success(headless, tmp_path):
+    save = tmp_path / "game.json"
+    save.write_text('{"turns": 2}')
+    mock_proc = _make_popen_mock(["moved 14 1 -1 1.0"])
+    with patch("subprocess.Popen", return_value=mock_proc):
+        result = headless.move_unit(save, 14, 2)
+    assert result["success"] is True
+    assert result["x"] == 1
+    assert result["y"] == -1
+    assert result["movement_left"] == 1.0
+
+
+def test_move_unit_illegal(headless, tmp_path):
+    save = tmp_path / "game.json"
+    save.write_text('{"turns": 2}')
+    mock_proc = _make_popen_mock(["illegal cannot_move"])
+    with patch("subprocess.Popen", return_value=mock_proc):
+        result = headless.move_unit(save, 14, 2)
+    assert result["success"] is False
+
+
+def test_legal_moves_parsed(headless, tmp_path):
+    save = tmp_path / "game.json"
+    save.write_text('{"turns": 2}')
+    mock_proc = _make_popen_mock(["legal 2 6 10"])
+    with patch("subprocess.Popen", return_value=mock_proc):
+        clocks = headless.legal_moves(save, 14)
+    assert clocks == [2, 6, 10]
+
+
+def test_legal_moves_empty(headless, tmp_path):
+    save = tmp_path / "game.json"
+    save.write_text('{"turns": 2}')
+    mock_proc = _make_popen_mock(["legal "])
+    with patch("subprocess.Popen", return_value=mock_proc):
+        clocks = headless.legal_moves(save, 14)
+    assert clocks == []
+
+
 def test_reuse_process_across_calls(headless, tmp_path):
     """JVM process started once and reused for multiple advance_turn calls."""
     save = tmp_path / "game.json"

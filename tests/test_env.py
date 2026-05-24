@@ -43,7 +43,7 @@ def _get_idx(env: UncivEnv, name) -> int:
 
 def test_spaces(env):
     assert env.observation_space.shape == (57,)
-    assert env.action_space.n == 19
+    assert env.action_space.n == 21
 
 
 def test_env_rank_uses_separate_save_files(tmp_path):
@@ -102,14 +102,23 @@ def test_action_masks_city_step(env):
 
 
 def test_action_masks_unit_step(env):
+    """Unit step: solo skip + le direzioni hex legali (da headless.legal_moves)."""
+    warrior = UnitState("Warrior", x=0, y=0, movement_points=2.0, id=5)
     env._step_type = "unit"
-    masks = env.action_masks()
+    env._pending_units = [warrior]
+    env._unit_rotation_index = 0
+    env._current_state = _mock_state(units=[warrior])
+    with patch.object(env.headless, "legal_moves", return_value=[2, 6]):
+        masks = env.action_masks()
     skip = env._skip_idx
-    move_s = env._move_start_idx
     assert masks.shape == (len(env.ACTION_MAP),)
-    assert not any(masks[:skip])
     assert masks[skip]
-    assert all(masks[move_s:move_s + 4])
+    assert not any(masks[:skip])  # niente costruzioni in unit step
+    clock2 = next(i for i, c in env._action_to_clock.items() if c == 2)
+    clock4 = next(i for i, c in env._action_to_clock.items() if c == 4)
+    clock6 = next(i for i, c in env._action_to_clock.items() if c == 6)
+    assert masks[clock2] and masks[clock6]
+    assert not masks[clock4]
 
 
 def test_mask_monument_available_when_not_built(env):
@@ -150,14 +159,17 @@ def test_at_least_one_true_city_step(env):
     assert env.action_masks().any()
 
 
-def test_unit_step_mask_unchanged(env):
+def test_unit_step_only_skip_when_no_legal_moves(env):
+    """Unità senza mosse legali → solo skip valido (anti-deadlock)."""
+    warrior = UnitState("Warrior", x=0, y=0, movement_points=2.0, id=5)
     env._step_type = "unit"
-    masks = env.action_masks()
-    skip = env._skip_idx
-    move_s = env._move_start_idx
-    assert masks[skip]
-    assert all(masks[move_s:move_s + 4])
-    assert not any(masks[:skip])
+    env._pending_units = [warrior]
+    env._unit_rotation_index = 0
+    env._current_state = _mock_state(units=[warrior])
+    with patch.object(env.headless, "legal_moves", return_value=[]):
+        masks = env.action_masks()
+    assert masks[env._skip_idx]
+    assert masks.sum() == 1
 
 
 def test_per_entity_rotation_transitions_to_unit_step(env):
@@ -188,11 +200,12 @@ def test_per_entity_rotation_advances_turn_after_warrior(env):
     with patch.object(env, '_apply_action'), \
          patch.object(env, '_apply_movement'), \
          patch.object(env, '_advance_turn') as mock_adv, \
+         patch.object(env, '_advance_tech'), \
          patch.object(env.parser, 'parse', return_value=mock_state):
         env._current_state = mock_state
         env._step_type = "unit"
         env._unit_rotation_index = 0
-        env._pending_warriors = [warrior]
+        env._pending_units = [warrior]
         env._buffered_city_action = env._skip_idx
         obs, reward, term, trunc, info = env.step(env._skip_idx)
 
@@ -256,17 +269,17 @@ def test_advance_tech_completes_tech(env, tmp_path):
 
 
 def test_obs_contains_selected_unit_coords(env):
-    """In unit step, obs[53-55] riflettono unità selezionata."""
-    warrior = UnitState("Warrior", x=10, y=10, movement_points=2.0)
+    """In unit step, obs[53-55] riflettono unità selezionata (coord hex radius-based)."""
+    warrior = UnitState("Warrior", x=0, y=0, movement_points=2.0, id=3)
     mock_state = _mock_state(units=[warrior])
     env._current_state = mock_state
     env._step_type = "unit"
     env._unit_rotation_index = 0
-    env._pending_warriors = [warrior]
+    env._pending_units = [warrior]
 
     obs = env._get_obs()
     assert obs.shape == (57,)
-    # x=10/20=0.5, y=10/20=0.5, movement=2/2=1.0
+    # x=0,y=0 con radius 10 → (0/10+1)/2 = 0.5 ; movement=2/2=1.0
     assert abs(obs[53] - 0.5) < 1e-5
     assert abs(obs[54] - 0.5) < 1e-5
     assert abs(obs[55] - 1.0) < 1e-5
