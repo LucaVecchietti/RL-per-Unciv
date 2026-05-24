@@ -144,3 +144,44 @@ def test_science_per_turn_from_history():
     civ_extra = {"tech": {"scienceOfLast8Turns": [5, 8, 10]}}
     state = _parse_save(_civ_save(civ_extra))
     assert state.science_per_turn == 10.0
+
+
+# --- File 20 — fix decodifica statsHistory ---
+
+def _city_dict(name: str = "Delhi") -> dict:
+    return {
+        "name": name,
+        "population": {"population": 1},
+        "cityConstructions": {},
+        "tiles": [],
+        "location": {"x": 0, "y": 0},
+    }
+
+
+def test_statshistory_happiness_from_H():
+    state = _parse_save(_civ_save({"statsHistory": {"5": "H6"}}))
+    assert state.happiness == 6.0
+
+
+def test_statshistory_food_and_production_to_main_city():
+    civ_extra = {"statsHistory": {"5": "C4P7"}, "cities": [_city_dict()]}
+    state = _parse_save(_civ_save(civ_extra))
+    assert state.cities[0].food_per_turn == 4.0
+    assert state.cities[0].production_per_turn == 7.0
+
+
+def test_culture_per_turn_not_from_statshistory_C():
+    # C è il cibo (Growth), NON deve diventare cultura/turno
+    state = _parse_save(_civ_save({"statsHistory": {"5": "C99"}}))
+    assert state.culture_per_turn == 0.0
+
+
+def test_gold_per_turn_not_from_population_N():
+    # N è la popolazione, NON deve diventare oro/turno
+    state = _parse_save(_civ_save({"statsHistory": {"5": "N50"}}))
+    assert state.gold_per_turn == 0.0
+
+
+def test_stored_culture_parsed():
+    state = _parse_save(_civ_save({"policies": {"storedCulture": 42}}))
+    assert state.stored_culture == 42.0

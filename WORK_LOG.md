@@ -5,6 +5,43 @@
 
 ---
 
+## [2026-05-24] — Sessione 30
+
+### Obiettivo sessione
+Implementare la Fase A (File 20): fix costruzione + decodifica `statsHistory`.
+
+### File modificati
+- `src/envs/unciv_env.py` (modificato — `_apply_action` scrive `constructionQueue`; `culture_per_turn` come delta di `stored_culture`)
+- `src/parsers/state_parser.py` (modificato — `_STATS_LETTERS`, `production_per_turn`←P, `food_per_turn`←C su città principale, `gold_per_turn`=0, `culture_per_turn`=0 nel parser, campo `stored_culture`; rimosso `_parse_culture_per_turn`)
+- `tests/test_env.py` (modificato — test `_apply_action` scrive `constructionQueue`)
+- `tests/test_parser.py` (modificato — 5 test decodifica statsHistory + `stored_culture`)
+
+### Fatto
+- **A1**: `_apply_action` ora scrive `constructionQueue=[name]` + `inProgressConstructions` (setdefault) + `currentConstructionIsUserSet=True`, e rimuove il vecchio `currentConstruction`. Sblocca la costruzione (prima l'agente non costruiva nulla).
+- **A2**: corretta la decodifica di `statsHistory` (è `CivRankingHistory`): `production_per_turn`←`P`, `food_per_turn`←`C` (Growth) assegnati alla città principale; `gold_per_turn`=0 (era `N`=popolazione); `culture_per_turn` reale via delta di `policies.storedCulture` calcolato in `unciv_env` (opzione b scelta dall'utente). Aggiunta costante documentativa `_STATS_LETTERS`.
+
+### Test
+- [x] 100/100 test verdi: `.venv\Scripts\python -m pytest tests/ -v` (94 + 6 nuovi)
+
+### Validazione a runtime (confermata dai log del training dell'utente)
+- `built_monument/granary/barracks/colosseum/walls_mean` ≈ 1 (prima 0) ✅
+- `trained_warrior/scout/settler/spearman_mean` 3–10 (prima 0, solo worker=1) ✅
+- `culture_per_turn_mean` ≈ 3, `ep_total_culture_mean` ≈ 420 (prima ~0.1 / 22, era cibo) ✅
+- `population` 12, `city_territory` 16, `science_per_turn` 15 (in crescita)
+
+### Osservazioni (non bug — feature delle fasi successive)
+- `gold_mean` cala: l'agente paga il mantenimento delle molte unità prodotte (prima non costruiva nulla → oro accumulato a ~1660).
+- Settler costruiti (2–4) ma inutilizzabili finché manca FoundCity (Fase C); `cities_mean` resta 1.
+- `strategic/luxury_res_count` restano 0 (servono Worker + miglioramenti → Fase C).
+- `built_courthouse/stable/temple` = 0 (tech/prereq non soddisfatti o non scelti).
+
+### TODO prossima sessione
+1. **Fase B (File 21)** — rework movimento delegato al motore (comando headless `move`, 6 direzioni hex, tutte le unità, costo terreno, action space 19→21)
+2. Poi Fase C (File 22 — espansione + risorse)
+3. Eliminare gli script scratch in `Temp/` quando non servono più
+
+---
+
 ## [2026-05-24] — Sessione 29
 
 ### Obiettivo sessione

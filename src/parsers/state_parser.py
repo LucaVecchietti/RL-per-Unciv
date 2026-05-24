@@ -31,6 +31,14 @@ _CONSTRUCTION_COSTS: dict[str, float] = {
     'Archer': 40, 'Spearman': 56, 'Chariot Archer': 56,
 }
 
+# statsHistory è CivRankingHistory (punteggi di classifica, NON rese per turno).
+# Lettere = RankingType.idForSerialization. Solo H/P/C sono usabili come valori utili qui.
+_STATS_LETTERS = {
+    'S': 'score', 'N': 'population', 'C': 'food_per_turn', 'P': 'production_per_turn',
+    'G': 'gold_total', 'T': 'territory', 'F': 'force', 'H': 'happiness',
+    'W': 'n_techs', 'A': 'n_policies',
+}
+
 
 @dataclass
 class UnitState:
@@ -94,6 +102,8 @@ class GameState:
     city_territory_tiles: int = 0
     strategic_resources: dict[str, int] = field(default_factory=dict)
     luxury_resources: dict[str, int] = field(default_factory=dict)
+    # File 20 — cultura accumulata (per calcolo cultura/turno come delta in UncivEnv)
+    stored_culture: float = 0.0
 
 
 class UncivStateParser:
@@ -133,15 +143,25 @@ class UncivStateParser:
         current_tech_progress = float(techs_in_progress.get(current_tech, 0.0)) if current_tech else 0.0
         current_tech_cost = float(_TECH_COSTS.get(current_tech, 60.0)) if current_tech else 60.0
 
-        # Stats da statsHistory (compresse, decoded per chiave)
+        # statsHistory = CivRankingHistory (vedi _STATS_LETTERS): NON sono rese per turno.
+        # Solo H (Happiness), P (Production/turno) e C (Growth = cibo/turno) sono usabili.
         stats = self._parse_stats_history(civ)
-        # H = happiness (raw integer, e.g. 8), C = culture/10, N = gold/turn /10
         happiness = float(stats.get('H', 8))
-        gold_per_turn = float(stats.get('N', 0)) / 10.0
+        production_per_turn = float(stats.get('P', 0))
+        food_per_turn = float(stats.get('C', 0))
         # Scienza/turno: sorgente autoritativa coerente con _advance_tech
         science_history = tech.get('scienceOfLast8Turns') or []
         science_per_turn = float(science_history[-1]) if science_history else 0.0
-        culture_per_turn = self._parse_culture_per_turn(civ)
+        # 'N' è la popolazione, non l'oro → gold/turno non disponibile qui (oro reale = civ.gold)
+        gold_per_turn = 0.0
+        # cultura/turno: calcolata in UncivEnv come delta di stored_culture (il parser non ha lo stato precedente)
+        culture_per_turn = 0.0
+        stored_culture = float(civ.get('policies', {}).get('storedCulture', 0) or 0)
+
+        # Rese per-turno (stima civ-level) assegnate alla città principale (mono-città)
+        if cities:
+            cities[0].production_per_turn = production_per_turn
+            cities[0].food_per_turn = food_per_turn
 
         # File 19 — territorio città e risorse
         city_territory_tiles = sum(len(c.get('tiles', [])) for c in civ.get('cities', []))
@@ -202,6 +222,7 @@ class UncivStateParser:
             city_territory_tiles=city_territory_tiles,
             strategic_resources=strategic_resources,
             luxury_resources=luxury_resources,
+            stored_culture=stored_culture,
         )
 
     def _find_player_civ(self, raw: dict) -> dict:
@@ -281,11 +302,6 @@ class UncivStateParser:
         latest_turn = max(history.keys(), key=int)
         entry: str = history[latest_turn]
         return {m.group(1): int(m.group(2)) for m in re.finditer(r'([A-Z])(-?\d+)', entry)}
-
-    def _parse_culture_per_turn(self, civ: dict) -> float:
-        """Estrae cultura/turno da statsHistory (chiave 'C'). Fallback 0.0 se assente."""
-        stats = self._parse_stats_history(civ)
-        return float(stats.get('C', 0)) / 10.0
 
     def to_observation_vector(
         self,

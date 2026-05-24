@@ -332,3 +332,24 @@ def test_info_contains_new_metrics(env):
         "ep_buildings_built", "ep_units_built",
     ]:
         assert key in info
+
+
+# --- File 20 — fix costruzione ---
+
+def test_apply_action_sets_construction_queue(env, tmp_path):
+    """_apply_action scrive constructionQueue[0], non il campo inesistente currentConstruction."""
+    import json as _json
+    save = tmp_path / "game.json"
+    raw = {"civilizations": [{
+        "civName": "India",
+        "cities": [{"cityConstructions": {"currentConstruction": "Granary"}}],
+    }]}
+    save.write_text(_json.dumps(raw))
+    env.save_path = save
+    idx = _get_idx(env, "Monument")
+    env._apply_action(idx)
+    cc = _json.loads(save.read_text())["civilizations"][0]["cities"][0]["cityConstructions"]
+    assert cc["constructionQueue"] == ["Monument"]
+    assert cc["currentConstructionIsUserSet"] is True
+    assert "inProgressConstructions" in cc
+    assert "currentConstruction" not in cc

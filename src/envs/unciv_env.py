@@ -230,7 +230,11 @@ class UncivEnv(gym.Env):
         for civ in raw.get("civilizations", []):
             if civ.get("civName") == "India":
                 if civ.get("cities"):
-                    civ["cities"][0]["cityConstructions"]["currentConstruction"] = name
+                    cc = civ["cities"][0].setdefault("cityConstructions", {})
+                    cc["constructionQueue"] = [name]
+                    cc.setdefault("inProgressConstructions", {})
+                    cc["currentConstructionIsUserSet"] = True
+                    cc.pop("currentConstruction", None)
                 break
 
         with open(self.save_path, 'w') as f:
@@ -276,6 +280,9 @@ class UncivEnv(gym.Env):
         self._current_state = self.parser.parse(self.save_path)
         prev = self._prev_state
         curr = self._current_state
+        # Cultura/turno = delta di stored_culture (il parser non ha lo stato precedente)
+        if prev is not None:
+            curr.culture_per_turn = max(0.0, curr.stored_culture - prev.stored_culture)
         self._accumulate_episode_metrics(prev, curr)
         obs = self._get_obs()
         reward = self._compute_reward(prev, curr, self._buffered_city_action)
