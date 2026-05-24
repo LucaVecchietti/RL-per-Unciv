@@ -196,6 +196,26 @@ def test_legal_moves_empty(headless, tmp_path):
     assert clocks == []
 
 
+def test_found_city_success(headless, tmp_path):
+    save = tmp_path / "game.json"
+    save.write_text('{"turns": 2}')
+    mock_proc = _make_popen_mock(["founded 3 6"])
+    with patch("subprocess.Popen", return_value=mock_proc):
+        result = headless.found_city(save, 41)
+    assert result["success"] is True
+    assert result["x"] == 3
+    assert result["y"] == 6
+
+
+def test_found_city_illegal(headless, tmp_path):
+    save = tmp_path / "game.json"
+    save.write_text('{"turns": 2}')
+    mock_proc = _make_popen_mock(["illegal cannot_settle"])
+    with patch("subprocess.Popen", return_value=mock_proc):
+        result = headless.found_city(save, 41)
+    assert result["success"] is False
+
+
 def test_reuse_process_across_calls(headless, tmp_path):
     """JVM process started once and reused for multiple advance_turn calls."""
     save = tmp_path / "game.json"

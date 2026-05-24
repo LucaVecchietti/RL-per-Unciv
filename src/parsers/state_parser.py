@@ -312,6 +312,7 @@ class UncivStateParser:
         self,
         state: GameState,
         selected_unit: Optional[UnitState] = None,
+        selected_city: Optional[CityState] = None,
     ) -> np.ndarray:
         """
         Converte GameState in vettore numpy (52,) float32.
@@ -368,7 +369,9 @@ class UncivStateParser:
                 ]
             )
 
-        obs += _city_obs(state.cities[0]) if state.cities else [0.0] * 19
+        # Città 1 = città selezionata (per-city rotation); fallback alla prima città
+        city1 = selected_city if selected_city is not None else (state.cities[0] if state.cities else None)
+        obs += _city_obs(city1) if city1 is not None else [0.0] * 19
 
         # --- Tech (8) ---
         tr = state.techs_researched

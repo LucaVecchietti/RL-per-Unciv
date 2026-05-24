@@ -5,6 +5,51 @@
 
 ---
 
+## [2026-05-24] — Sessione 32
+
+### Obiettivo sessione
+Implementare la Fase C1 (File 22): espansione multi-città (FoundCity + rotation per-città).
+
+### File modificati
+- `unciv/Unciv/desktop/src/com/unciv/app/desktop/DesktopLauncher.kt` (comando `foundcity`; fork gitignored → solo locale)
+- `unciv/Unciv.jar` (ricompilato — NON in git)
+- `src/utils/headless.py` (`found_city`)
+- `src/parsers/state_parser.py` (param `selected_city`; Città1 obs = città selezionata)
+- `src/envs/unciv_env.py` (rotation per-città, azione FoundCity, action space 21→22, masking Settler, `_apply_found_city`, contatore cities_founded)
+- `src/utils/reward.py` (pop/edifici sommati su tutte le città + bonus `found_city`)
+- `config/default_config.yaml` (`reward.found_city: 5.0`)
+- `src/utils/callbacks.py` (22 azioni + `cities_founded_mean`)
+- `CLAUDE.md` (contratto azioni 21→22)
+- `tests/test_headless.py`, `tests/test_env.py`, `tests/test_parser.py`, `tests/test_reward.py`, `tests/test_callbacks.py`
+
+### Fatto
+- **Kotlin**: comando `foundcity <path> <id>` → `getUnitById` + `hasUnique(FoundCity)` + `canBeSettled` + `civ.addCity` + `unit.destroy`. JAR ricompilato (JDK 21).
+- **headless.py**: `found_city` → dict success/x/y/reason.
+- **env**: per-entity rotation estesa a **città** (ogni città sceglie la costruzione) poi unità; obs Città1 = città selezionata (shape (57,) invariata); `Discrete(21)→Discrete(22)` (+FoundCity); FoundCity mascherata solo per Settler; `_apply_action(city_index)`.
+- **reward**: popolazione ed edifici sommati su **tutte** le città; bonus `found_city` quando il numero di città cresce.
+- **Scelte utente**: scope solo C1; rotation per-città; training fermato per smoke pulito.
+
+### Test
+- [x] 113/113 test verdi: `.venv\Scripts\python -m pytest tests/ -q`
+- [x] Smoke JAR (training fermato): `error not_settler` (Worker), `illegal cannot_settle` (Settler troppo vicino), **`founded -1 -9` → India 2 città ['Delhi','Mumbai']** (success path validato).
+
+### Problemi incontrati / diagnosi
+- Lungo falso allarme sul success-path di `foundcity`: sembrava non produrre output. **Root cause: il mio harness di smoke** — `Set-Content` prependeva un **BOM** alla prima riga del file comandi, così quando `foundcity` era il primo comando diventava `?foundcity…` e `startsWith("foundcity ")` falliva. Con un comando "esca" prima, `foundcity` funziona perfettamente (founded + 2 città). Il codice non aveva bug.
+- Cache Gradle ambigua durante i rebuild → usato `--rerun-tasks` per ricompilazioni pulite.
+- `catch(Exception)` → `catch(Throwable)` nel branch foundcity (più robusto: un eventuale Error a runtime diventa `error …` invece di rompere il loop comandi silenziosamente).
+
+### Note / rischi
+- Action space 22 → checkpoint precedenti incompatibili (ripartire da zero).
+- Una città fondata aggiunge il Palace ai builtBuildings → piccolo doppio conteggio con `building_complete` oltre al bonus `found_city` (trascurabile).
+- C1 non include ancora le risorse nell'obs né i Worker/miglioramenti (Fase C2/C3).
+
+### TODO prossima sessione
+1. **Validare a runtime** (riavviare training col nuovo JAR): `cities_mean > 1`, `cities_founded_mean > 0`, `moved_settler_mean > 0`, `fps` accettabile.
+2. Se ok → **Fase C2** (risorse nell'obs + reward di posizionamento), poi **C3** (Worker/miglioramenti → risorse connesse).
+3. Eliminare gli script scratch in `Temp/`.
+
+---
+
 ## [2026-05-24] — Sessione 31
 
 ### Obiettivo sessione

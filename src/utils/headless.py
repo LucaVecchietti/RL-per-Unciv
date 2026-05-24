@@ -16,10 +16,10 @@ class UncivHeadless:
 
     Protocol:
         Python → JVM:  "advance <path>\\n" | "move <path> <id> <clock>\\n"
-                       | "legalmoves <path> <id>\\n" | "quit\\n"
+                       | "legalmoves <path> <id>\\n" | "foundcity <path> <id>\\n" | "quit\\n"
         JVM → Python:  "READY\\n" (on startup) | "ok <turn>\\n"
                        | "moved <id> <x> <y> <movement>\\n" | "legal <clock>...\\n"
-                       | "illegal <reason>\\n" | "error <msg>\\n"
+                       | "founded <x> <y>\\n" | "illegal <reason>\\n" | "error <msg>\\n"
     """
 
     def __init__(self, jar_path: str, timeout: int = 60, java_path: str = "java") -> None:
@@ -178,6 +178,21 @@ class UncivHeadless:
         if response.startswith("legal"):
             return [int(c) for c in response.split()[1:]]
         return []
+
+    def found_city(self, save_path: Path, unit_id: int) -> dict:
+        """
+        Fonda una città con il Settler indicato (consuma l'unità).
+
+        Returns:
+            dict: {"success": True, "x", "y"} se fondata,
+                  altrimenti {"success": False, "reason": ...}.
+        """
+        save_path = Path(save_path)
+        response = self._send_command(f"foundcity {save_path.as_posix()} {unit_id}")
+        if response.startswith("founded "):
+            parts = response.split()
+            return {"success": True, "x": int(parts[1]), "y": int(parts[2])}
+        return {"success": False, "reason": response}
 
     def start_new_game(self, template_path: Path, dest_path: Path) -> None:
         """

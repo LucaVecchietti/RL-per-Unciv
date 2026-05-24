@@ -50,6 +50,22 @@ def test_new_tech_positive():
     assert reward > 0.0
 
 
+def test_found_city_bonus():
+    """Fondare una nuova città dà almeno il bonus found_city."""
+    prev = make_state()  # 1 città
+    curr = GameState(
+        turn=11, current_player="India", gold=200, happiness=5,
+        cities=[
+            CityState("Rome", 3, "Monument", [], 200, 0),
+            CityState("Delhi", 1, "", [], 200, 0),
+        ],
+        techs_researched=["Agriculture"], current_tech="Writing",
+        map_width=20, map_height=20,
+    )
+    reward = compute_reward(prev, curr, action=0)
+    assert reward >= REWARD_WEIGHTS["found_city"]
+
+
 def test_gold_increase_positive():
     prev = make_state(gold=100.0)
     curr = make_state(gold=200.0)

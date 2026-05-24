@@ -12,6 +12,7 @@ REWARD_WEIGHTS = {
     "happiness_penalty":  0.1,
     "idle_penalty":       0.05,
     "exploration":        0.3,
+    "found_city":         5.0,
 }
 
 
@@ -41,16 +42,19 @@ def compute_reward(
     reward = 0.0
     w = weights
 
-    # --- 1. Crescita popolazione ---
-    if prev.cities and curr.cities:
-        pop_delta = curr.cities[0].population - prev.cities[0].population
-        reward += pop_delta * w["population_growth"]
+    # --- 1. Crescita popolazione (somma su tutte le città) ---
+    pop_delta = sum(c.population for c in curr.cities) - sum(c.population for c in prev.cities)
+    reward += pop_delta * w["population_growth"]
 
-    # --- 2. Edifici completati ---
-    prev_buildings = set(prev.cities[0].built_buildings) if prev.cities else set()
-    curr_buildings = set(curr.cities[0].built_buildings) if curr.cities else set()
-    new_buildings = curr_buildings - prev_buildings
-    reward += len(new_buildings) * w["building_complete"]
+    # --- 2. Edifici completati (somma su tutte le città) ---
+    prev_buildings = sum(len(c.built_buildings) for c in prev.cities)
+    curr_buildings = sum(len(c.built_buildings) for c in curr.cities)
+    reward += max(0, curr_buildings - prev_buildings) * w["building_complete"]
+
+    # --- 2b. Fondazione di una nuova città ---
+    new_cities = len(curr.cities) - len(prev.cities)
+    if new_cities > 0:
+        reward += new_cities * w["found_city"]
 
     # --- 3. Tecnologie scoperte ---
     new_techs = set(curr.techs_researched) - set(prev.techs_researched)

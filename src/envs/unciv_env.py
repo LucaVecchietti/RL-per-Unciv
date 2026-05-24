@@ -27,12 +27,12 @@ def _count_by_name(units: list[UnitState]) -> dict[str, int]:
 
 class UncivEnv(gym.Env):
     """
-    Ambiente Gymnasium per Unciv — Fase 2.B.
+    Ambiente Gymnasium per Unciv — Fase 2.C (C1: espansione multi-città).
 
-    Action space: Discrete(21) — edifici + unità (da ruleset JAR) + skip + 6 direzioni hex.
-    Observation space: Box(57,) float32.
-    Per-entity rotation: city step → unità_0 step → ... → advance turn (tutte le unità con MP>0).
-    Movimento delegato al motore Unciv (costo terreno, adiacenza hex, world-wrap).
+    Action space: Discrete(22) — edifici + unità (da ruleset JAR) + skip + 6 direzioni hex + FoundCity.
+    Observation space: Box(57,) float32 (Città1 = città selezionata nella rotation).
+    Per-entity rotation: città_0 step → … → unità_0 step → … → advance turn.
+    Movimento e fondazione città delegati al motore Unciv.
     """
 
     metadata = {"render_modes": ["human", "rgb_array"]}
@@ -70,10 +70,11 @@ class UncivEnv(gym.Env):
         buildings = sorted(self._building_names)
         units = sorted(self._unit_names)
         move_names = [f"MOVE_{c}" for c in _MOVE_CLOCKS]
-        action_list = buildings + units + [None] + move_names
+        action_list = buildings + units + [None] + move_names + ["FoundCity"]
         self.ACTION_MAP: dict[int, Optional[str]] = {i: name for i, name in enumerate(action_list)}
         self._skip_idx: int = action_list.index(None)
         self._move_start_idx: int = self._skip_idx + 1
+        self._found_city_idx: int = action_list.index("FoundCity")
         self._n_construction_actions: int = len(buildings) + len(units)
         # mappa indice azione → direzione hex (clock)
         self._action_to_clock: dict[int, int] = {
@@ -90,8 +91,10 @@ class UncivEnv(gym.Env):
         self._prev_state: Optional[GameState] = None
         self._episode_steps = 0
 
-        # Per-entity rotation (Fase 2.1 / 2.B — tutte le unità)
+        # Per-entity rotation (Fase 2.1 / 2.B / 2.C — città e unità)
         self._step_type: str = "city"
+        self._city_rotation_index: int = 0
+        self._pending_cities: list = []
         self._unit_rotation_index: int = 0
         self._pending_units: list[UnitState] = []
         self._buffered_city_action: int = self._skip_idx
@@ -114,6 +117,9 @@ class UncivEnv(gym.Env):
         self._ep_units_stuck: int = 0
         self._ep_new_tiles: int = 0
 
+        # File 22 (C1) — espansione
+        self._ep_cities_founded: int = 0
+
     # ------------------------------------------------------------------
     # Metodi obbligatori Gymnasium
     # ------------------------------------------------------------------
@@ -123,6 +129,8 @@ class UncivEnv(gym.Env):
         super().reset(seed=seed)
         self._episode_steps = 0
         self._step_type = "city"
+        self._city_rotation_index = 0
+        self._pending_cities = []
         self._unit_rotation_index = 0
         self._pending_units = []
         self._buffered_city_action = 6
@@ -140,8 +148,11 @@ class UncivEnv(gym.Env):
         self._ep_legal_moves_count = 0
         self._ep_units_stuck = 0
         self._ep_new_tiles = 0
+        self._ep_cities_founded = 0
         self._start_new_game()
         self._current_state = self.parser.parse(self.save_path)
+        self._pending_cities = list(self._current_state.cities)
+        self._city_rotation_index = 0
         obs = self._get_obs()
         info = {"turn": self._current_state.turn}
         return obs, info
@@ -159,7 +170,12 @@ class UncivEnv(gym.Env):
 
         if self._step_type == "city":
             self._buffered_city_action = action
-            self._apply_action(action)
+            self._apply_action(action, self._city_rotation_index)
+            self._city_rotation_index += 1
+            if self._city_rotation_index < len(self._pending_cities):
+                obs = self._get_obs()
+                return obs, 0.0, False, False, {"turn": self._current_state.turn, "step_type": "city"}
+            # tutte le città decise → fase unità
             self._pending_units = [
                 u for u in self._current_state.units
                 if u.movement_points > 0
@@ -173,7 +189,10 @@ class UncivEnv(gym.Env):
 
         # Unit step
         unit = self._pending_units[self._unit_rotation_index]
-        self._apply_movement(action, unit)
+        if action == self._found_city_idx:
+            self._apply_found_city(unit)
+        else:
+            self._apply_movement(action, unit)
         self._unit_rotation_index += 1
 
         if self._unit_rotation_index < len(self._pending_units):
@@ -193,12 +212,17 @@ class UncivEnv(gym.Env):
                 mask[self._skip_idx] = True
                 return mask
             state = self._current_state
-            city = state.cities[0] if state.cities else None
+            # città selezionata nella rotation per-città
+            city = None
+            if self._pending_cities and self._city_rotation_index < len(self._pending_cities):
+                city = self._pending_cities[self._city_rotation_index]
+            elif state.cities:
+                city = state.cities[0]
             built = set(city.built_buildings) if city else set()
             for i, name in self.ACTION_MAP.items():
                 if name is None:
                     mask[i] = True
-                elif name.startswith("MOVE_"):
+                elif name == "FoundCity" or name.startswith("MOVE_"):
                     mask[i] = False
                 else:
                     req = self._prereq_map.get(name)
@@ -221,6 +245,9 @@ class UncivEnv(gym.Env):
                 for i, clock in self._action_to_clock.items():
                     if clock in legal:
                         mask[i] = True
+                # FoundCity valido solo per i Settler
+                if unit.name == "Settler":
+                    mask[self._found_city_idx] = True
         return mask
 
     def render(self) -> None:
@@ -246,10 +273,10 @@ class UncivEnv(gym.Env):
         """Crea nuova partita copiando il template via UncivHeadless."""
         self.headless.start_new_game(self.template_path, self.save_path)
 
-    def _apply_action(self, action: int) -> None:
-        """Scrive la costruzione scelta nel JSON di Unciv. No-op per skip e MOVE_*."""
+    def _apply_action(self, action: int, city_index: int = 0) -> None:
+        """Scrive la costruzione scelta nella città `city_index`. No-op per skip, MOVE_* e FoundCity."""
         name = self.ACTION_MAP.get(action)
-        if name is None or name.startswith("MOVE_"):
+        if name is None or name == "FoundCity" or name.startswith("MOVE_"):
             return
 
         try:
@@ -260,8 +287,9 @@ class UncivEnv(gym.Env):
 
         for civ in raw.get("civilizations", []):
             if civ.get("civName") == "India":
-                if civ.get("cities"):
-                    cc = civ["cities"][0].setdefault("cityConstructions", {})
+                cities = civ.get("cities")
+                if cities and city_index < len(cities):
+                    cc = cities[city_index].setdefault("cityConstructions", {})
                     cc["constructionQueue"] = [name]
                     cc.setdefault("inProgressConstructions", {})
                     cc["currentConstructionIsUserSet"] = True
@@ -288,6 +316,14 @@ class UncivEnv(gym.Env):
         else:
             self._ep_moves_illegal += 1
 
+    def _apply_found_city(self, unit: UnitState) -> None:
+        """Fonda una città col Settler selezionato via il server headless. No-op se fallisce."""
+        if unit.id < 0:
+            return
+        result = self.headless.found_city(self.save_path, unit.id)
+        if result.get("success"):
+            self._ep_cities_founded += 1
+
     def _advance_game_turn(self) -> tuple[np.ndarray, float, bool, bool, dict]:
         """Avanza turno Unciv, calcola reward, restituisce output step."""
         self._prev_state = self._current_state
@@ -301,6 +337,10 @@ class UncivEnv(gym.Env):
         if prev is not None:
             curr.culture_per_turn = max(0.0, curr.stored_culture - prev.stored_culture)
         self._accumulate_episode_metrics(prev, curr)
+        # nuovo turno → fase città (rotation per-città su tutte le città)
+        self._step_type = "city"
+        self._pending_cities = list(curr.cities)
+        self._city_rotation_index = 0
         obs = self._get_obs()
         reward = self._compute_reward(prev, curr, self._buffered_city_action)
         terminated = self._is_terminated()
@@ -335,6 +375,8 @@ class UncivEnv(gym.Env):
             "units_stuck": self._ep_units_stuck,
             "legal_moves_available": (self._ep_legal_moves_total / self._ep_legal_moves_count) if self._ep_legal_moves_count else 0.0,
             "new_tiles_per_move": (self._ep_new_tiles / self._ep_moves_succeeded) if self._ep_moves_succeeded else 0.0,
+            # File 22 (C1) — espansione
+            "cities_founded": self._ep_cities_founded,
         }
         return obs, reward, terminated, truncated, info
 
@@ -359,12 +401,18 @@ class UncivEnv(gym.Env):
                 self._ep_units_built[name] = self._ep_units_built.get(name, 0) + delta
 
     def _get_obs(self) -> np.ndarray:
-        """Restituisce obs con unità selezionata se in unit step."""
-        selected: Optional[UnitState] = None
+        """Restituisce obs con entità selezionata: città in city step, unità in unit step."""
+        selected_unit: Optional[UnitState] = None
+        selected_city = None
         if (self._step_type == "unit" and self._pending_units and
                 self._unit_rotation_index < len(self._pending_units)):
-            selected = self._pending_units[self._unit_rotation_index]
-        return self.parser.to_observation_vector(self._current_state, selected_unit=selected)
+            selected_unit = self._pending_units[self._unit_rotation_index]
+        elif (self._step_type == "city" and self._pending_cities and
+                self._city_rotation_index < len(self._pending_cities)):
+            selected_city = self._pending_cities[self._city_rotation_index]
+        return self.parser.to_observation_vector(
+            self._current_state, selected_unit=selected_unit, selected_city=selected_city
+        )
 
     def _advance_tech(self) -> None:
         """Manually accumulate science for player civ (JVM skips player tech in headless)."""

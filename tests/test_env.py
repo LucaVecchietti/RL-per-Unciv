@@ -43,7 +43,7 @@ def _get_idx(env: UncivEnv, name) -> int:
 
 def test_spaces(env):
     assert env.observation_space.shape == (57,)
-    assert env.action_space.n == 21
+    assert env.action_space.n == 22
 
 
 def test_env_rank_uses_separate_save_files(tmp_path):
@@ -345,6 +345,64 @@ def test_info_contains_new_metrics(env):
         "ep_buildings_built", "ep_units_built",
     ]:
         assert key in info
+
+
+# --- File 22 (C1) — espansione multi-città ---
+
+def _multi_city_state(units=None):
+    return GameState(
+        10, "India", 200, 5,
+        [CityState("Rome", 3, "Monument", [], 200, 0),
+         CityState("Delhi", 9, "", ["Granary", "Library"], 200, 0)],
+        ["Agriculture"], "Writing", 20, 20, units=units or [],
+    )
+
+
+def test_city_rotation_multiple_cities(env):
+    """Con 2 città il city step si ripete per ogni città prima della fase unità/advance."""
+    s = _multi_city_state()
+    env._current_state = s
+    env._pending_cities = list(s.cities)
+    env._city_rotation_index = 0
+    env._step_type = "city"
+    with patch.object(env, '_apply_action'):
+        obs, reward, term, trunc, info = env.step(0)
+    assert env._step_type == "city"
+    assert env._city_rotation_index == 1
+    assert info.get("step_type") == "city"
+
+
+def test_obs_reflects_selected_city(env):
+    """L'obs (blocco Città1) riflette la città selezionata nella rotation."""
+    s = _multi_city_state()
+    env._current_state = s
+    env._step_type = "city"
+    env._pending_cities = list(s.cities)
+    env._city_rotation_index = 1  # Delhi (pop 9)
+    obs = env._get_obs()
+    assert abs(obs[6] - 9 / 20.0) < 1e-5  # obs[6] = pop città selezionata / 20
+
+
+def test_found_city_mask_for_settler(env):
+    """FoundCity valido in unit step solo per i Settler."""
+    settler = UnitState("Settler", x=0, y=0, movement_points=2.0, id=9)
+    env._step_type = "unit"
+    env._pending_units = [settler]
+    env._unit_rotation_index = 0
+    env._current_state = _mock_state(units=[settler])
+    with patch.object(env.headless, "legal_moves", return_value=[]):
+        masks = env.action_masks()
+    assert masks[env._found_city_idx]
+
+
+def test_apply_found_city_increments_counter(env):
+    settler = UnitState("Settler", x=0, y=0, movement_points=2.0, id=9)
+    env._ep_cities_founded = 0
+    with patch.object(env.headless, "found_city",
+                      return_value={"success": True, "x": 1, "y": 1}) as mock_found:
+        env._apply_found_city(settler)
+    mock_found.assert_called_once()
+    assert env._ep_cities_founded == 1
 
 
 # --- File 20 — fix costruzione ---
