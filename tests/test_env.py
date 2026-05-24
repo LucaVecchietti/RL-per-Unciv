@@ -270,3 +270,65 @@ def test_obs_contains_selected_unit_coords(env):
     assert abs(obs[53] - 0.5) < 1e-5
     assert abs(obs[54] - 0.5) < 1e-5
     assert abs(obs[55] - 1.0) < 1e-5
+
+
+# --- File 19 — extended metrics logging ---
+
+def test_ep_buildings_built_tracks_new_construction(env):
+    """turno N: built=[], turno N+1: built=[Monument] → ep_buildings_built == {Monument: 1}."""
+    prev = _mock_state()  # città con built_buildings=[]
+    curr = GameState(
+        11, "India", 200, 5,
+        [CityState("Rome", 3, "Monument", ["Monument"], 200, 0)],
+        ["Agriculture"], "Writing", 20, 20, units=[],
+    )
+    env._current_state = prev
+    env._ep_buildings_built = {}
+    with patch.object(env, '_advance_turn'), \
+         patch.object(env, '_advance_tech'), \
+         patch.object(env.parser, 'parse', return_value=curr):
+        env._advance_game_turn()
+    assert env._ep_buildings_built == {"Monument": 1}
+
+
+def test_ep_units_built_tracks_new_unit(env):
+    """turno N: units=[], turno N+1: units=[Warrior] → ep_units_built == {Warrior: 1}."""
+    prev = _mock_state(units=[])
+    curr = _mock_state(units=[UnitState("Warrior", 5, 5, 2.0)])
+    env._current_state = prev
+    env._ep_units_built = {}
+    with patch.object(env, '_advance_turn'), \
+         patch.object(env, '_advance_tech'), \
+         patch.object(env.parser, 'parse', return_value=curr):
+        env._advance_game_turn()
+    assert env._ep_units_built == {"Warrior": 1}
+
+
+def test_ep_totals_reset_on_episode_reset(env):
+    """Dopo reset() i contatori per-episodio tornano a zero/vuoto."""
+    env._ep_total_gold = 99.0
+    env._ep_buildings_built = {"Monument": 3}
+    env._ep_units_built = {"Warrior": 2}
+    with patch.object(env, '_start_new_game'), \
+         patch.object(env.parser, 'parse', return_value=_mock_state()):
+        env.reset()
+    assert env._ep_total_gold == 0.0
+    assert env._ep_buildings_built == {}
+    assert env._ep_units_built == {}
+
+
+def test_info_contains_new_metrics(env):
+    """info dict da _advance_game_turn contiene tutte le nuove chiavi File 19."""
+    curr = _mock_state()
+    env._current_state = curr
+    with patch.object(env, '_advance_turn'), \
+         patch.object(env, '_advance_tech'), \
+         patch.object(env.parser, 'parse', return_value=curr):
+        obs, reward, term, trunc, info = env._advance_game_turn()
+    for key in [
+        "tiles_explored", "city_territory_tiles", "science_per_turn",
+        "culture_per_turn", "strategic_resources", "luxury_resources",
+        "ep_total_gold", "ep_total_science", "ep_total_culture",
+        "ep_buildings_built", "ep_units_built",
+    ]:
+        assert key in info

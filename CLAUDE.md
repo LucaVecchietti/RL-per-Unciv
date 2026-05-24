@@ -7,6 +7,7 @@ Interfaccia con Unciv tramite file JSON di salvataggio.
 
 ## Stack tecnico
 - **Python** 3.11+
+- **Virtual env:** `C:\Users\lucav\Desktop\RL-per-Unciv\.venv` — **usa SEMPRE questo venv** per test, training, script e qualsiasi comando Python. Non usare il Python di sistema. Esempi: `.venv\Scripts\python -m pytest tests/ -v`, `.venv\Scripts\python train.py`
 - **RL Framework:** Stable-Baselines3 v2+ (PPO)
 - **Ambiente:** Gymnasium (non gym legacy)
 - **Monitoring:** TensorBoard
@@ -44,6 +45,7 @@ unciv-rl-agent/
 5. **Docstring obbligatorie** — ogni classe e metodo pubblico deve avere docstring
 6. **Test prima del fix** — se un test fallisce, non modificare il test, correggi il codice
 7. **Niente codice extra** — non aggiungere funzionalità non richieste esplicitamente
+8. **Zero debiti a fine sessione** — ogni bug, regression o test fallito introdotto o scoperto durante la sessione deve essere risolto **prima** di chiudere la sessione corrente. Non chiudere mai una sessione con la suite rossa per modifiche fatte in quella sessione
 
 ## Contratti critici tra moduli
 | Contratto | Valore attuale | File coinvolti |
@@ -141,10 +143,11 @@ unciv-rl-agent/
 3. Aspetta conferma prima di scrivere codice
 
 ## Come terminare ogni sessione
-1. Esegui `python -m pytest tests/ -v` e mostra output
-2. Aggiorna `WORK_LOG.md`
-3. Elenca esplicitamente i TODO per la prossima sessione
-4. **Fai git add, commit, push delle modifiche — obbligatorio, senza aspettare conferma.**
+1. Esegui `.venv\Scripts\python -m pytest tests/ -v` e mostra output
+2. **Risolvi ogni bug, regression o test fallito introdotto/scoperto nella sessione prima di proseguire** (vedi Regola di sviluppo 8) — non chiudere con la suite rossa
+3. Aggiorna `WORK_LOG.md`
+4. Elenca esplicitamente i TODO per la prossima sessione
+5. **Fai git add, commit, push delle modifiche — obbligatorio, senza aspettare conferma.**
 
 ## Convenzione commit
 Usa sempre il formato Conventional Commits:

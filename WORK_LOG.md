@@ -5,6 +5,45 @@
 
 ---
 
+## [2026-05-24] — Sessione 28
+
+### Obiettivo sessione
+Implementare File 19 — Extended Metrics Logging (TODO Sessione 27).
+
+### File modificati
+- `CLAUDE.md` (modificato — Stack tecnico: venv obbligatorio `.venv`; Regola sviluppo 8 "zero debiti a fine sessione"; chiusura sessione aggiornata)
+- `src/parsers/state_parser.py` (modificato — nuovi campi GameState + parsing risorse/territorio/scienza)
+- `src/envs/unciv_env.py` (modificato — contatori per-episodio + info dict esteso + `_accumulate_episode_metrics` + `_count_by_name`)
+- `src/utils/callbacks.py` (modificato — nuove metriche TensorBoard in `_on_rollout_end`)
+- `tests/test_parser.py` (modificato — 6 nuovi test)
+- `tests/test_env.py` (modificato — 4 nuovi test)
+- `.venv/` (ricreato — non in git)
+
+### Fatto
+- **Decisione approccio "Ibrido"** sui 3 campi in conflitto (la spec li elencava come nuovi ma esistevano già con sorgenti diverse):
+  - `science_per_turn` allineato a `tech.scienceOfLast8Turns[-1]` (coerente con `_advance_tech`, e con la spec)
+  - `tiles_explored` invariato dalla sorgente reale `tileList[].exploredBy` (la spec proponeva `civ.exploredTiles`, che rischia di non esistere nei save reali → regressione silenziosa evitata)
+  - `culture_per_turn` estratto in helper `_parse_culture_per_turn()` mantenendo `statsHistory` chiave `C`
+- **state_parser.py**: 3 nuovi campi `GameState` (`city_territory_tiles`, `strategic_resources`, `luxury_resources`); parsing `detailedCivResources` (Strategic/Luxury); `city_territory_tiles = sum(len(c.tiles))`
+- **unciv_env.py**: contatori `_ep_total_gold/science/culture`, `_ep_buildings_built`, `_ep_units_built` in `__init__` e `reset()`; accumulo in nuovo `_accumulate_episode_metrics()` (gold solo incrementi, delta edifici/unità); `info` dict esteso con 11 nuove chiavi; helper module-level `_count_by_name()`
+- **callbacks.py**: `logger.record()` per metriche per-turno, totali episodio, costruzioni/unità per tipo, conteggio risorse
+- Nessuna modifica a obs shape `(57,)` o action space `Discrete(19)` — checkpoint compatibili
+
+### Problemi incontrati
+- **venv rotto**: il progetto è stato copiato da un'altra macchina (`pyvenv.cfg` puntava a `C:\Users\Luca Vecchietti\...Python313`, inesistente qui). Su questa macchina è disponibile solo **Python 3.14.5** (3.13 rimosso). Le dipendenze cp313 nel venv non erano importabili sotto 3.14 (mismatch ABI).
+- **Fix**: ricreato `.venv` con Python 3.14.5 e reinstallato `requirements.txt`. Installati tra gli altri: torch 2.12.0, stable-baselines3 2.8.0, sb3-contrib 2.8.0, gymnasium 1.2.3, numpy 2.4.6, tensorboard 2.20.0. Ora `sb3_contrib` è presente → i 4 test prima skippati passano.
+
+### Test
+- [x] 94/94 test verdi: `.venv\Scripts\python -m pytest tests/ -v` (45.65s)
+- [x] 84 test pre-esistenti (inclusi 4 prima skippati per sb3_contrib mancante) + 10 nuovi File 19
+
+### TODO prossima sessione
+1. Riavviare training e verificare che le nuove metriche compaiano in TensorBoard (`unciv/tiles_explored_mean`, `unciv/science_per_turn_mean`, `unciv/built_*_mean`, `unciv/trained_*_mean`, `unciv/strategic_res_count_mean`, ecc.)
+2. Verificare su save reale che `detailedCivResources` e `city.tiles` siano popolati (popolano `strategic/luxury_resources` e `city_territory_tiles`)
+3. Valutare se usare le nuove metriche per estendere la reward function (Fase 3)
+
+---
+
 ## [2026-05-03] — Sessione 27
 
 ### Obiettivo sessione

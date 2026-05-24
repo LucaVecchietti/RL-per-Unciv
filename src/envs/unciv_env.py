@@ -21,6 +21,14 @@ _MOVE_DELTA: dict[str, tuple[int, int]] = {
 }
 
 
+def _count_by_name(units: list[UnitState]) -> dict[str, int]:
+    """Conta le unità per nome. Usato per il delta unità create per-episodio."""
+    counts: dict[str, int] = {}
+    for u in units:
+        counts[u.name] = counts.get(u.name, 0) + 1
+    return counts
+
+
 class UncivEnv(gym.Env):
     """
     Ambiente Gymnasium per Unciv — Fase 2.2c.
@@ -86,6 +94,13 @@ class UncivEnv(gym.Env):
         self._pending_warriors: list[UnitState] = []
         self._buffered_city_action: int = self._skip_idx
 
+        # File 19 — contatori metriche per-episodio
+        self._ep_total_gold: float = 0.0
+        self._ep_total_science: float = 0.0
+        self._ep_total_culture: float = 0.0
+        self._ep_buildings_built: dict[str, int] = {}
+        self._ep_units_built: dict[str, int] = {}
+
     # ------------------------------------------------------------------
     # Metodi obbligatori Gymnasium
     # ------------------------------------------------------------------
@@ -98,6 +113,11 @@ class UncivEnv(gym.Env):
         self._unit_rotation_index = 0
         self._pending_warriors = []
         self._buffered_city_action = 6
+        self._ep_total_gold = 0.0
+        self._ep_total_science = 0.0
+        self._ep_total_culture = 0.0
+        self._ep_buildings_built = {}
+        self._ep_units_built = {}
         self._start_new_game()
         self._current_state = self.parser.parse(self.save_path)
         obs = self._get_obs()
@@ -254,21 +274,55 @@ class UncivEnv(gym.Env):
         self._advance_turn()
         self._advance_tech()
         self._current_state = self.parser.parse(self.save_path)
+        prev = self._prev_state
+        curr = self._current_state
+        self._accumulate_episode_metrics(prev, curr)
         obs = self._get_obs()
-        reward = self._compute_reward(self._prev_state, self._current_state, self._buffered_city_action)
+        reward = self._compute_reward(prev, curr, self._buffered_city_action)
         terminated = self._is_terminated()
         truncated = self._episode_steps >= self.max_turns
         if terminated:
-            reward += compute_terminal_reward(self._current_state, self.max_turns)
+            reward += compute_terminal_reward(curr, self.max_turns)
         info = {
-            "turn": self._current_state.turn,
-            "gold": self._current_state.gold,
-            "happiness": self._current_state.happiness,
-            "n_cities": len(self._current_state.cities),
-            "n_techs": len(self._current_state.techs_researched),
-            "population": sum(c.population for c in self._current_state.cities),
+            "turn": curr.turn,
+            "gold": curr.gold,
+            "happiness": curr.happiness,
+            "n_cities": len(curr.cities),
+            "n_techs": len(curr.techs_researched),
+            "population": sum(c.population for c in curr.cities),
+            # File 19 — metriche estese
+            "tiles_explored": curr.tiles_explored,
+            "city_territory_tiles": curr.city_territory_tiles,
+            "science_per_turn": curr.science_per_turn,
+            "culture_per_turn": curr.culture_per_turn,
+            "strategic_resources": dict(curr.strategic_resources),
+            "luxury_resources": dict(curr.luxury_resources),
+            "ep_total_gold": self._ep_total_gold,
+            "ep_total_science": self._ep_total_science,
+            "ep_total_culture": self._ep_total_culture,
+            "ep_buildings_built": dict(self._ep_buildings_built),
+            "ep_units_built": dict(self._ep_units_built),
         }
         return obs, reward, terminated, truncated, info
+
+    def _accumulate_episode_metrics(self, prev: Optional[GameState], curr: GameState) -> None:
+        """Aggiorna i contatori per-episodio (File 19) confrontando stato precedente e corrente."""
+        if prev is not None:
+            self._ep_total_gold += max(0.0, curr.gold - prev.gold)
+        self._ep_total_science += curr.science_per_turn
+        self._ep_total_culture += curr.culture_per_turn
+        if prev is None:
+            return
+        prev_built = {b for c in prev.cities for b in c.built_buildings}
+        curr_built = {b for c in curr.cities for b in c.built_buildings}
+        for b in curr_built - prev_built:
+            self._ep_buildings_built[b] = self._ep_buildings_built.get(b, 0) + 1
+        prev_unit_counts = _count_by_name(prev.units)
+        curr_unit_counts = _count_by_name(curr.units)
+        for name, cnt in curr_unit_counts.items():
+            delta = max(0, cnt - prev_unit_counts.get(name, 0))
+            if delta:
+                self._ep_units_built[name] = self._ep_units_built.get(name, 0) + delta
 
     def _get_obs(self) -> np.ndarray:
         """Restituisce obs con unità selezionata se in unit step."""

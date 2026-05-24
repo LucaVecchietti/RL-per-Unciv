@@ -90,6 +90,10 @@ class GameState:
     n_known_civs: int = 0
     at_war: bool = False
     gold_per_turn: float = 0.0
+    # File 19 — extended metrics logging
+    city_territory_tiles: int = 0
+    strategic_resources: dict[str, int] = field(default_factory=dict)
+    luxury_resources: dict[str, int] = field(default_factory=dict)
 
 
 class UncivStateParser:
@@ -131,11 +135,27 @@ class UncivStateParser:
 
         # Stats da statsHistory (compresse, decoded per chiave)
         stats = self._parse_stats_history(civ)
-        # H = happiness (raw integer, e.g. 8), S = science/10, C = culture/10
+        # H = happiness (raw integer, e.g. 8), C = culture/10, N = gold/turn /10
         happiness = float(stats.get('H', 8))
-        science_per_turn = float(stats.get('S', 0)) / 10.0
-        culture_per_turn = float(stats.get('C', 0)) / 10.0
         gold_per_turn = float(stats.get('N', 0)) / 10.0
+        # Scienza/turno: sorgente autoritativa coerente con _advance_tech
+        science_history = tech.get('scienceOfLast8Turns') or []
+        science_per_turn = float(science_history[-1]) if science_history else 0.0
+        culture_per_turn = self._parse_culture_per_turn(civ)
+
+        # File 19 — territorio città e risorse
+        city_territory_tiles = sum(len(c.get('tiles', [])) for c in civ.get('cities', []))
+        strategic_resources: dict[str, int] = {}
+        luxury_resources: dict[str, int] = {}
+        for entry in civ.get('detailedCivResources', []) or []:
+            res = entry.get('resource', {})
+            name = res.get('name', '')
+            amount = int(entry.get('amount', 0))
+            rtype = res.get('resourceType', '')
+            if rtype == 'Strategic':
+                strategic_resources[name] = strategic_resources.get(name, 0) + amount
+            elif rtype == 'Luxury':
+                luxury_resources[name] = luxury_resources.get(name, 0) + amount
 
         # Mappa e unità
         tile_map = raw.get('tileMap', {})
@@ -179,6 +199,9 @@ class UncivStateParser:
             n_known_civs=n_known_civs,
             at_war=at_war,
             gold_per_turn=gold_per_turn,
+            city_territory_tiles=city_territory_tiles,
+            strategic_resources=strategic_resources,
+            luxury_resources=luxury_resources,
         )
 
     def _find_player_civ(self, raw: dict) -> dict:
@@ -258,6 +281,11 @@ class UncivStateParser:
         latest_turn = max(history.keys(), key=int)
         entry: str = history[latest_turn]
         return {m.group(1): int(m.group(2)) for m in re.finditer(r'([A-Z])(-?\d+)', entry)}
+
+    def _parse_culture_per_turn(self, civ: dict) -> float:
+        """Estrae cultura/turno da statsHistory (chiave 'C'). Fallback 0.0 se assente."""
+        stats = self._parse_stats_history(civ)
+        return float(stats.get('C', 0)) / 10.0
 
     def to_observation_vector(
         self,

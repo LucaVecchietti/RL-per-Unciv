@@ -24,12 +24,49 @@ class UncivMetricsCallback(BaseCallback):
         if not self._episode_infos:
             return
 
-        self.logger.record("unciv/gold_mean",       np.mean([i.get("gold", 0)       for i in self._episode_infos]))
-        self.logger.record("unciv/happiness_mean",  np.mean([i.get("happiness", 0)  for i in self._episode_infos]))
-        self.logger.record("unciv/cities_mean",     np.mean([i.get("n_cities", 0)   for i in self._episode_infos]))
-        self.logger.record("unciv/turns_mean",      np.mean([i.get("turn", 0)       for i in self._episode_infos]))
-        self.logger.record("unciv/techs_mean",      np.mean([i.get("n_techs", 0)    for i in self._episode_infos]))
-        self.logger.record("unciv/population_mean", np.mean([i.get("population", 0) for i in self._episode_infos]))
+        infos = self._episode_infos
+
+        self.logger.record("unciv/gold_mean",       np.mean([i.get("gold", 0)       for i in infos]))
+        self.logger.record("unciv/happiness_mean",  np.mean([i.get("happiness", 0)  for i in infos]))
+        self.logger.record("unciv/cities_mean",     np.mean([i.get("n_cities", 0)   for i in infos]))
+        self.logger.record("unciv/turns_mean",      np.mean([i.get("turn", 0)       for i in infos]))
+        self.logger.record("unciv/techs_mean",      np.mean([i.get("n_techs", 0)    for i in infos]))
+        self.logger.record("unciv/population_mean", np.mean([i.get("population", 0) for i in infos]))
+
+        # File 19 — metriche per turno (media episodi)
+        self.logger.record("unciv/tiles_explored_mean",   np.mean([i.get("tiles_explored", 0)      for i in infos]))
+        self.logger.record("unciv/city_territory_mean",   np.mean([i.get("city_territory_tiles", 0) for i in infos]))
+        self.logger.record("unciv/science_per_turn_mean", np.mean([i.get("science_per_turn", 0)    for i in infos]))
+        self.logger.record("unciv/culture_per_turn_mean", np.mean([i.get("culture_per_turn", 0)    for i in infos]))
+
+        # File 19 — totali episodio
+        self.logger.record("unciv/ep_total_gold_mean",    np.mean([i.get("ep_total_gold", 0)    for i in infos]))
+        self.logger.record("unciv/ep_total_science_mean", np.mean([i.get("ep_total_science", 0) for i in infos]))
+        self.logger.record("unciv/ep_total_culture_mean", np.mean([i.get("ep_total_culture", 0) for i in infos]))
+
+        # File 19 — costruzioni completate per tipo
+        for b in ["Monument", "Granary", "Library", "Barracks", "Temple", "Colosseum", "Walls", "Stable", "Courthouse"]:
+            self.logger.record(
+                f"unciv/built_{b.lower()}_mean",
+                np.mean([i.get("ep_buildings_built", {}).get(b, 0) for i in infos]),
+            )
+
+        # File 19 — unità create per tipo
+        for u in ["Warrior", "Scout", "Settler", "Worker", "Spearman"]:
+            self.logger.record(
+                f"unciv/trained_{u.lower()}_mean",
+                np.mean([i.get("ep_units_built", {}).get(u, 0) for i in infos]),
+            )
+
+        # File 19 — risorse (totale strategiche e luxury, media episodi)
+        self.logger.record(
+            "unciv/strategic_res_count_mean",
+            np.mean([sum(i.get("strategic_resources", {}).values()) for i in infos]),
+        )
+        self.logger.record(
+            "unciv/luxury_res_count_mean",
+            np.mean([sum(i.get("luxury_resources", {}).values()) for i in infos]),
+        )
 
         self._episode_infos.clear()
 
