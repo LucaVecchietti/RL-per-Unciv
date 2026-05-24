@@ -3,7 +3,11 @@ import zipfile
 
 import pytest
 
-from src.utils.ruleset_reader import ConstructionInfo, load_early_game_constructions
+from src.utils.ruleset_reader import (
+    ConstructionInfo,
+    load_early_game_constructions,
+    load_resource_types,
+)
 
 _MOCK_TECHS = [
     {
@@ -77,6 +81,14 @@ _MOCK_UNITS = [
 ]
 
 
+_MOCK_RESOURCES = [
+    {"name": "Iron", "resourceType": "Strategic", "revealedBy": "Iron Working"},
+    {"name": "Horses", "resourceType": "Strategic", "revealedBy": "Animal Husbandry"},
+    {"name": "Gold Ore", "resourceType": "Luxury"},
+    {"name": "Wheat", "resourceType": "Bonus"},
+]
+
+
 @pytest.fixture
 def mock_jar(tmp_path):
     jar_path = tmp_path / "Unciv.jar"
@@ -84,7 +96,16 @@ def mock_jar(tmp_path):
         zf.writestr("jsons/Civ V - Vanilla/Techs.json", json.dumps(_MOCK_TECHS))
         zf.writestr("jsons/Civ V - Vanilla/Buildings.json", json.dumps(_MOCK_BUILDINGS))
         zf.writestr("jsons/Civ V - Vanilla/Units.json", json.dumps(_MOCK_UNITS))
+        zf.writestr("jsons/Civ V - Vanilla/TileResources.json", json.dumps(_MOCK_RESOURCES))
     return str(jar_path)
+
+
+def test_load_resource_types(mock_jar):
+    rt = load_resource_types(mock_jar)
+    assert rt["Iron"] == "Strategic"
+    assert rt["Horses"] == "Strategic"
+    assert rt["Gold Ore"] == "Luxury"
+    assert rt["Wheat"] == "Bonus"
 
 
 @pytest.fixture

@@ -19,6 +19,7 @@ class ConstructionInfo:
 _BUILDINGS_PATH = "jsons/Civ V - Vanilla/Buildings.json"
 _UNITS_PATH = "jsons/Civ V - Vanilla/Units.json"
 _TECHS_PATH = "jsons/Civ V - Vanilla/Techs.json"
+_RESOURCES_PATH = "jsons/Civ V - Vanilla/TileResources.json"
 
 _TARGET_ERAS = {"Ancient", "Classical", "Ancient era", "Classical era"}
 
@@ -71,6 +72,18 @@ def load_tech_prereqs(jar_path: str) -> dict[str, list[str]]:
         for tech in era_block.get("techs", []):
             name = tech.get("name", "")
             result[name] = tech.get("prerequisites", [])
+    return result
+
+
+def load_resource_types(jar_path: str) -> dict[str, str]:
+    """Return {resource_name: resourceType} (Strategic/Luxury/Bonus) from TileResources.json."""
+    with zipfile.ZipFile(jar_path, "r") as jar:
+        data = _load_jsonc(jar, _RESOURCES_PATH)
+    result: dict[str, str] = {}
+    for r in data:
+        name = r.get("name", "")
+        if name:
+            result[name] = r.get("resourceType", "")
     return result
 
 

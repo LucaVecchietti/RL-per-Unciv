@@ -50,7 +50,7 @@ unciv-rl-agent/
 ## Contratti critici tra moduli
 | Contratto | Valore attuale | File coinvolti |
 |---|---|---|
-| Dimensione observation vector | `(57,)` float32 | `state_parser.py` ↔ `unciv_env.py` |
+| Dimensione observation vector | `(61,)` float32 | `state_parser.py` ↔ `unciv_env.py` |
 | Numero azioni | `22` (Discrete) — 9 edifici + 5 unità + skip + 6 direzioni hex + FoundCity | `unciv_env.py` ↔ `train.py` |
 | Nome civilizzazione default | `"India"` | `state_parser.py`, `unciv_env.py` |
 | Save file per env | `saves/current_game_{rank}.json` | `unciv_env.py` ↔ `train.py` |

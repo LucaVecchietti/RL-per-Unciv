@@ -8,7 +8,7 @@ import json
 from src.parsers.state_parser import UncivStateParser, GameState, UnitState, _TECH_COSTS
 from src.utils.reward import compute_reward, compute_terminal_reward
 from src.utils.headless import UncivHeadless
-from src.utils.ruleset_reader import load_early_game_constructions, load_tech_prereqs
+from src.utils.ruleset_reader import load_early_game_constructions, load_tech_prereqs, load_resource_types
 
 # ACTION_MAP built dynamically in __init__ from load_early_game_constructions().
 # Order: buildings (alphabetical) → units (alphabetical) → None (skip) → MOVE_*
@@ -30,7 +30,7 @@ class UncivEnv(gym.Env):
     Ambiente Gymnasium per Unciv — Fase 2.C (C1: espansione multi-città).
 
     Action space: Discrete(22) — edifici + unità (da ruleset JAR) + skip + 6 direzioni hex + FoundCity.
-    Observation space: Box(57,) float32 (Città1 = città selezionata nella rotation).
+    Observation space: Box(61,) float32 (Città1 = città selezionata; +4 feature risorse C2).
     Per-entity rotation: città_0 step → … → unità_0 step → … → advance turn.
     Movimento e fondazione città delegati al motore Unciv.
     """
@@ -62,6 +62,8 @@ class UncivEnv(gym.Env):
         self.headless = UncivHeadless(jar_path=jar_path, timeout=timeout, java_path=java_path)
 
         constructions = load_early_game_constructions(jar_path)
+        # File 22 (C2) — mappa risorsa→tipo dal ruleset, usata dal parser per le risorse
+        self.parser.resource_types = load_resource_types(jar_path)
         self._prereq_map: dict[str, Optional[str]] = {c.name: c.required_tech for c in constructions}
         self._tech_prereqs: dict[str, list[str]] = load_tech_prereqs(jar_path)
         self._unit_names: set[str] = {c.name for c in constructions if c.is_unit}
@@ -82,7 +84,7 @@ class UncivEnv(gym.Env):
         }
 
         self.observation_space = gym.spaces.Box(
-            low=0.0, high=1.0, shape=(57,), dtype=np.float32
+            low=0.0, high=1.0, shape=(61,), dtype=np.float32
         )
         self.action_space = gym.spaces.Discrete(len(self.ACTION_MAP))
 
@@ -377,6 +379,8 @@ class UncivEnv(gym.Env):
             "new_tiles_per_move": (self._ep_new_tiles / self._ep_moves_succeeded) if self._ep_moves_succeeded else 0.0,
             # File 22 (C1) — espansione
             "cities_founded": self._ep_cities_founded,
+            # File 22 (C2) — risorse nel territorio (Strategic + Luxury, tutte le città)
+            "territory_resources": sum(c.territory_strategic + c.territory_luxury for c in curr.cities),
         }
         return obs, reward, terminated, truncated, info
 

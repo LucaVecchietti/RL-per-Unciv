@@ -62,7 +62,7 @@ def test_observation_vector_shape():
         map_width=20, map_height=20
     )
     obs = parser.to_observation_vector(mock_state)
-    assert obs.shape == (57,)
+    assert obs.shape == (61,)
     assert obs.dtype.name == "float32"
 
 
@@ -209,7 +209,44 @@ def test_coord_normalization_handles_negative():
     )
     sel = UnitState("Warrior", x=-10, y=0, movement_points=2.0, id=1)
     obs = parser.to_observation_vector(st, selected_unit=sel)
-    assert obs.shape == (57,)
+    assert obs.shape == (61,)
     # x=-10, radius 10 → (-10/10 + 1)/2 = 0.0 ; y=0 → 0.5
     assert abs(obs[53] - 0.0) < 1e-5
     assert abs(obs[54] - 0.5) < 1e-5
+
+
+# --- File 22 (C2) — risorse ---
+
+def test_territory_resources_counted():
+    import tempfile as _t
+    civ_extra = {"cities": [{
+        "name": "Delhi", "population": {"population": 1}, "cityConstructions": {},
+        "tiles": [{"x": 1, "y": 1}, {"x": 2, "y": 2}], "location": {"x": 0, "y": 0},
+    }]}
+    tiles = [
+        {"position": {"x": 1, "y": 1}, "resource": "Iron"},
+        {"position": {"x": 2, "y": 2}, "resource": "Gold Ore"},
+    ]
+    raw = _civ_save(civ_extra, tile_list=tiles)
+    parser = UncivStateParser(player_civ="India",
+                              resource_types={"Iron": "Strategic", "Gold Ore": "Luxury"})
+    with _t.NamedTemporaryFile(suffix=".json", mode='w', delete=False) as f:
+        json.dump(raw, f)
+        path = f.name
+    state = parser.parse(path)
+    assert state.cities[0].territory_strategic == 1
+    assert state.cities[0].territory_luxury == 1
+    assert state.resource_tiles[(1, 1)] == "Strategic"
+
+
+def test_obs_resource_features():
+    from src.parsers.state_parser import GameState, CityState
+    parser = UncivStateParser()
+    city = CityState("Rome", 3, "", [], 200, 0)
+    city.territory_strategic = 5
+    city.territory_luxury = 2
+    st = GameState(10, "India", 200, 5, [city], ["Agriculture"], "Writing", 20, 20)
+    obs = parser.to_observation_vector(st, selected_city=city)
+    # obs[57]=territory_strategic/10=0.5 ; obs[58]=territory_luxury/10=0.2
+    assert abs(obs[57] - 0.5) < 1e-5
+    assert abs(obs[58] - 0.2) < 1e-5

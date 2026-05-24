@@ -66,6 +66,20 @@ def test_found_city_bonus():
     assert reward >= REWARD_WEIGHTS["found_city"]
 
 
+def test_resource_placement_bonus():
+    """Catturare tile-risorsa nel territorio dà il bonus resource_placement."""
+    prev = make_state()  # territory_strategic/luxury = 0
+    curr_city = CityState("Rome", 3, "Monument", [], 200, 0)
+    curr_city.territory_strategic = 2
+    curr = GameState(
+        turn=11, current_player="India", gold=200, happiness=5,
+        cities=[curr_city], techs_researched=["Agriculture"], current_tech="Writing",
+        map_width=20, map_height=20,
+    )
+    reward = compute_reward(prev, curr, action=0)
+    assert reward >= 2 * REWARD_WEIGHTS["resource_placement"]
+
+
 def test_gold_increase_positive():
     prev = make_state(gold=100.0)
     curr = make_state(gold=200.0)

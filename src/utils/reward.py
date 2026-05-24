@@ -13,6 +13,7 @@ REWARD_WEIGHTS = {
     "idle_penalty":       0.05,
     "exploration":        0.3,
     "found_city":         5.0,
+    "resource_placement": 2.0,
 }
 
 
@@ -55,6 +56,12 @@ def compute_reward(
     new_cities = len(curr.cities) - len(prev.cities)
     if new_cities > 0:
         reward += new_cities * w["found_city"]
+
+    # --- 2c. Risorse Strategic/Luxury catturate nel territorio (Fase C2) ---
+    prev_res = sum(c.territory_strategic + c.territory_luxury for c in prev.cities)
+    curr_res = sum(c.territory_strategic + c.territory_luxury for c in curr.cities)
+    if curr_res > prev_res:
+        reward += (curr_res - prev_res) * w["resource_placement"]
 
     # --- 3. Tecnologie scoperte ---
     new_techs = set(curr.techs_researched) - set(prev.techs_researched)

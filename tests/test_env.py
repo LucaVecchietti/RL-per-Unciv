@@ -42,7 +42,7 @@ def _get_idx(env: UncivEnv, name) -> int:
 
 
 def test_spaces(env):
-    assert env.observation_space.shape == (57,)
+    assert env.observation_space.shape == (61,)
     assert env.action_space.n == 22
 
 
@@ -65,7 +65,7 @@ def test_step_output_shape(env):
         mock_parse.return_value = mock_state
         env._current_state = mock_state
         obs, reward, term, trunc, info = env.step(0)
-        assert obs.shape == (57,)
+        assert obs.shape == (61,)
         assert isinstance(reward, float)
         assert isinstance(term, bool)
 
@@ -184,7 +184,7 @@ def test_per_entity_rotation_transitions_to_unit_step(env):
         env._current_state = mock_state
         obs, reward, term, trunc, info = env.step(0)
 
-    assert obs.shape == (57,)
+    assert obs.shape == (61,)
     assert reward == 0.0
     assert term is False
     assert trunc is False
@@ -209,7 +209,7 @@ def test_per_entity_rotation_advances_turn_after_warrior(env):
         env._buffered_city_action = env._skip_idx
         obs, reward, term, trunc, info = env.step(env._skip_idx)
 
-    assert obs.shape == (57,)
+    assert obs.shape == (61,)
     assert env._step_type == "city"
     mock_adv.assert_called_once()
 
@@ -278,7 +278,7 @@ def test_obs_contains_selected_unit_coords(env):
     env._pending_units = [warrior]
 
     obs = env._get_obs()
-    assert obs.shape == (57,)
+    assert obs.shape == (61,)
     # x=0,y=0 con radius 10 → (0/10+1)/2 = 0.5 ; movement=2/2=1.0
     assert abs(obs[53] - 0.5) < 1e-5
     assert abs(obs[54] - 0.5) < 1e-5

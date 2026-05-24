@@ -5,6 +5,43 @@
 
 ---
 
+## [2026-05-24] — Sessione 34
+
+### Obiettivo sessione
+Implementare la Fase C2 (File 22): risorse nell'obs + reward di posizionamento.
+
+### File modificati
+- `src/utils/ruleset_reader.py` (modificato — `load_resource_types(jar)` da `TileResources.json`)
+- `src/parsers/state_parser.py` (modificato — `resource_types` nel parser; `GameState.resource_tiles`; `CityState.territory_strategic/luxury`; obs +4 feature (57→61); helper `_hex_distance`)
+- `src/envs/unciv_env.py` (modificato — carica `resource_types` dal jar, `observation_space` (61,))
+- `src/utils/reward.py` (modificato — peso `resource_placement`, bonus su delta tile-risorsa in territorio)
+- `config/default_config.yaml` (modificato — `reward.resource_placement: 2.0`)
+- `src/utils/callbacks.py` (modificato — `territory_resources_mean`)
+- `CLAUDE.md` (modificato — contratto obs (57,)→(61,))
+- `tests/test_ruleset_reader.py`, `tests/test_parser.py`, `tests/test_env.py`, `tests/test_reward.py` (test nuovi/adattati)
+
+### Fatto
+- **ruleset_reader**: `load_resource_types` mappa nome→tipo (Strategic/Luxury/Bonus) dal ruleset (il save NON contiene `resourceType` per tile).
+- **parser**: costruisce `resource_tiles {(x,y): tipo}` (solo Strategic/Luxury) dai tile; conta le risorse nel territorio di ogni città (match `city.tiles` ↔ posizioni risorsa); obs +4 feature in coda: risorse Strategic/Luxury nel territorio della città selezionata + entro raggio 3 dall'unità selezionata.
+- **reward**: bonus `resource_placement` quando cresce il totale di tile-risorsa catturate nei territori (premia fondare su/vicino a risorse).
+- **Decisioni**: niente tech-gating in questa iterazione (conto tutte le Strategic/Luxury — segnale più chiaro); feature aggiunte in coda così gli indici obs esistenti non cambiano.
+
+### Test
+- [x] 119/119 test verdi: `.venv\Scripts\python -m pytest tests/ -q` (115 + 4 nuovi C2)
+- Nessun rebuild JAR: C2 è solo Python (legge `TileResources.json` già nel jar).
+
+### Note / rischi
+- Obs (61,) → checkpoint precedenti incompatibili (ripartire da zero).
+- Tech-gating delle risorse (visibilità per `revealedBy`) non implementato: l'agente "vede" tutte le risorse. Raffinamento futuro.
+- `detailedCivResources` resta vuoto senza Worker/miglioramenti → `strategic/luxury_res_count` (risorse *connesse*) restano 0 fino a C3; il nuovo `territory_resources` invece misura le risorse nel territorio (a prescindere dalla connessione).
+
+### TODO prossima sessione
+1. Riavviare training (obs 61) e verificare: `territory_resources_mean` cresce, le città tendono a includere risorse, niente crash (fix headless Sessione 33).
+2. **Fase C3**: Worker + miglioramenti → risorse connesse reali (`detailedCivResources`) → reward sulle risorse connesse. Richiede comando Kotlin `improve` + rebuild JAR; validare prima che i miglioramenti Worker siano processati in headless.
+3. Eliminare gli script scratch in `Temp/`.
+
+---
+
 ## [2026-05-24] — Sessione 33
 
 ### Obiettivo sessione

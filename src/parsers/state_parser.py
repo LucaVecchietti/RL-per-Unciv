@@ -39,6 +39,17 @@ _STATS_LETTERS = {
     'W': 'n_techs', 'A': 'n_policies',
 }
 
+# File 22 (C2) — raggio (in tile hex) per contare le risorse vicine all'unità selezionata
+_RESOURCE_OBS_RADIUS = 3
+
+
+def _hex_distance(x1: int, y1: int, x2: int, y2: int) -> int:
+    """Distanza esagonale Unciv (senza world-wrap), coerente con HexMath.getDistance."""
+    dx, dy = x1 - x2, y1 - y2
+    if (dx >= 0) == (dy >= 0):
+        return max(abs(dx), abs(dy))
+    return abs(dx) + abs(dy)
+
 
 @dataclass
 class UnitState:
@@ -73,6 +84,9 @@ class CityState:
     tiles_worked: int = 1
     x: int = 0
     y: int = 0
+    # File 22 (C2) — risorse nel territorio
+    territory_strategic: int = 0
+    territory_luxury: int = 0
 
 
 @dataclass
@@ -106,6 +120,8 @@ class GameState:
     luxury_resources: dict[str, int] = field(default_factory=dict)
     # File 20 — cultura accumulata (per calcolo cultura/turno come delta in UncivEnv)
     stored_culture: float = 0.0
+    # File 22 (C2) — posizioni risorse Strategic/Luxury: {(x, y): tipo}
+    resource_tiles: dict = field(default_factory=dict)
 
 
 class UncivStateParser:
@@ -114,8 +130,10 @@ class UncivStateParser:
     e lo converte in strutture dati Python usabili dall'ambiente RL.
     """
 
-    def __init__(self, player_civ: str = "India") -> None:
+    def __init__(self, player_civ: str = "India", resource_types: Optional[dict] = None) -> None:
         self.player_civ = player_civ
+        # Mappa nome risorsa → tipo (Strategic/Luxury/Bonus), dal ruleset JAR
+        self.resource_types: dict = resource_types or {}
 
     def load(self, path: str | Path) -> dict:
         """Carica il file JSON raw, gestendo sia plain che gzip."""
@@ -193,6 +211,31 @@ class UncivStateParser:
         )
         units = self._parse_units(tile_list)
 
+        # File 22 (C2) — posizioni risorse Strategic/Luxury (tipo dal ruleset)
+        resource_tiles: dict[tuple[int, int], str] = {}
+        for t in tile_list:
+            res = t.get('resource')
+            if not res:
+                continue
+            rtype = self.resource_types.get(res, '')
+            if rtype in ('Strategic', 'Luxury'):
+                pos = t.get('position', {})
+                resource_tiles[(int(pos.get('x', 0)), int(pos.get('y', 0)))] = rtype
+
+        # Conteggio risorse nel territorio di ogni città
+        for cr, cs in zip(civ.get('cities', []), cities):
+            strat = lux = 0
+            for tp in cr.get('tiles', []):
+                if not isinstance(tp, dict):
+                    continue
+                rt = resource_tiles.get((int(tp.get('x', 0)), int(tp.get('y', 0))))
+                if rt == 'Strategic':
+                    strat += 1
+                elif rt == 'Luxury':
+                    lux += 1
+            cs.territory_strategic = strat
+            cs.territory_luxury = lux
+
         # Diplomazia — at war se diplomaticStatus == 'War'
         diplomacy: dict = civ.get('diplomacy', {})
         at_war = any(
@@ -227,6 +270,7 @@ class UncivStateParser:
             strategic_resources=strategic_resources,
             luxury_resources=luxury_resources,
             stored_culture=stored_culture,
+            resource_tiles=resource_tiles,
         )
 
     def _find_player_civ(self, raw: dict) -> dict:
@@ -438,6 +482,24 @@ class UncivStateParser:
             np.clip(state.tiles_explored / total, 0.0, 1.0),
         ]
 
+        # --- Risorse (4) — File 22 C2 ---
+        sc = selected_city if selected_city is not None else (state.cities[0] if state.cities else None)
+
+        def _nearby_res(u: Optional[UnitState], rtype: str) -> int:
+            if u is None:
+                return 0
+            return sum(
+                1 for (rx, ry), t in state.resource_tiles.items()
+                if t == rtype and _hex_distance(u.x, u.y, rx, ry) <= _RESOURCE_OBS_RADIUS
+            )
+
+        obs += [
+            np.clip((sc.territory_strategic if sc else 0) / 10.0, 0.0, 1.0),
+            np.clip((sc.territory_luxury if sc else 0) / 10.0, 0.0, 1.0),
+            np.clip(_nearby_res(selected_unit, 'Strategic') / 10.0, 0.0, 1.0),
+            np.clip(_nearby_res(selected_unit, 'Luxury') / 10.0, 0.0, 1.0),
+        ]
+
         result = np.array(obs, dtype=np.float32)
-        assert result.shape == (57,), f"Expected (57,), got {result.shape}"
+        assert result.shape == (61,), f"Expected (61,), got {result.shape}"
         return result

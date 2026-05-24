@@ -84,6 +84,8 @@ class UncivMetricsCallback(BaseCallback):
 
         # File 22 (C1) — espansione
         self.logger.record("unciv/cities_founded_mean", np.mean([i.get("cities_founded", 0) for i in infos]))
+        # File 22 (C2) — risorse nel territorio
+        self.logger.record("unciv/territory_resources_mean", np.mean([i.get("territory_resources", 0) for i in infos]))
 
         self._episode_infos.clear()
 
