@@ -50,6 +50,39 @@ class UncivHeadless:
         t.join(timeout)
         return result[0]
 
+    # Prefissi delle risposte valide del protocollo. Tutto il resto su stdout
+    # (log del JVM, es. SoundPlayer$Preloader) va ignorato.
+    _RESPONSE_PREFIXES = ("ok ", "error", "moved ", "illegal", "legal", "founded ")
+
+    def _terminate_process(self) -> None:
+        """Termina il processo JVM e azzera il riferimento."""
+        try:
+            self._process.terminate()
+        except Exception:
+            pass
+        self._process = None
+
+    def _read_protocol_response(self) -> str:
+        """
+        Legge righe da stdout finché non arriva una risposta del protocollo,
+        saltando le righe di log asincrone del JVM (es. SoundPlayer$Preloader)
+        che possono intercalarsi e "sporcare" il canale comando→risposta.
+        """
+        deadline = time.monotonic() + self.timeout
+        while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                self._terminate_process()
+                raise TimeoutError(f"JVM server timeout dopo {self.timeout}s")
+            line = self._readline_timeout(self._process.stdout, max(1.0, remaining))
+            if line is None or line == "":
+                self._terminate_process()
+                raise TimeoutError(f"JVM server timeout/EOF dopo {self.timeout}s")
+            stripped = line.strip()
+            if stripped.startswith(self._RESPONSE_PREFIXES):
+                return stripped
+            # riga di log del JVM → ignora e continua a leggere
+
     def _ensure_running(self) -> None:
         """Start persistent JVM server process if not running or dead."""
         if self._process is not None and self._process.poll() is None:
@@ -108,21 +141,9 @@ class UncivHeadless:
             self._process.stdin.write(f"advance {save_path.as_posix()}\n")
             self._process.stdin.flush()
 
-            response = self._readline_timeout(self._process.stdout, self.timeout)
-
-            if response is None:
-                try:
-                    self._process.terminate()
-                except Exception:
-                    pass
-                self._process = None
-                raise TimeoutError(
-                    f"JVM server timeout dopo {self.timeout}s su: {save_path}"
-                )
-
-            response = response.strip()
-            if response.startswith("error "):
-                raise RuntimeError(f"Unciv headless errore: {response[6:]}")
+            response = self._read_protocol_response()
+            if response.startswith("error"):
+                raise RuntimeError(f"Unciv headless errore: {response}")
             if not response.startswith("ok "):
                 raise RuntimeError(f"Risposta JVM inattesa: {response!r}")
 
@@ -132,15 +153,7 @@ class UncivHeadless:
             self._ensure_running()
             self._process.stdin.write(command + "\n")
             self._process.stdin.flush()
-            response = self._readline_timeout(self._process.stdout, self.timeout)
-            if response is None:
-                try:
-                    self._process.terminate()
-                except Exception:
-                    pass
-                self._process = None
-                raise TimeoutError(f"JVM server timeout dopo {self.timeout}s su: {command}")
-            return response.strip()
+            return self._read_protocol_response()
 
     def move_unit(self, save_path: Path, unit_id: int, clock: int) -> dict:
         """

@@ -216,6 +216,27 @@ def test_found_city_illegal(headless, tmp_path):
     assert result["success"] is False
 
 
+def test_advance_turn_skips_log_noise_in_response(headless, tmp_path):
+    """Una riga di log del JVM intercalata prima di 'ok' va ignorata."""
+    save = tmp_path / "game.json"
+    save.write_text('{"turns": 2}')
+    noise = "2026-05-24T17:24:01Z [threadpool-daemon-0] [SoundPlayer$Preloader] Preload UncivSound(promote)"
+    mock_proc = _make_popen_mock([noise, "ok 3"])
+    with patch("subprocess.Popen", return_value=mock_proc):
+        headless.advance_turn(save)  # non deve sollevare
+
+
+def test_move_unit_skips_log_noise(headless, tmp_path):
+    save = tmp_path / "game.json"
+    save.write_text('{"turns": 2}')
+    noise = "2026-05-24T17:24:01Z [SoundPlayer$Preloader] Preload UncivSound(promote)"
+    mock_proc = _make_popen_mock([noise, "moved 14 1 -1 1.0"])
+    with patch("subprocess.Popen", return_value=mock_proc):
+        result = headless.move_unit(save, 14, 2)
+    assert result["success"] is True
+    assert result["x"] == 1
+
+
 def test_reuse_process_across_calls(headless, tmp_path):
     """JVM process started once and reused for multiple advance_turn calls."""
     save = tmp_path / "game.json"

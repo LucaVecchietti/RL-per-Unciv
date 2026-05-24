@@ -5,6 +5,34 @@
 
 ---
 
+## [2026-05-24] — Sessione 33
+
+### Obiettivo sessione
+Fix crash training: log asincroni del JVM su stdout rompono il protocollo headless.
+
+### Problema
+Durante il training: `RuntimeError: Risposta JVM inattesa: '...[SoundPlayer$Preloader] Preload UncivSound(fileName=promote)'`. Un thread daemon del gioco (SoundPlayer) scriveva un log su **stdout** proprio mentre Python leggeva la risposta a `advance` → la riga di log veniva scambiata per risposta del protocollo. Race non deterministica, più frequente ora che ci sono combattimenti (suono `promote`).
+
+### File modificati
+- `src/utils/headless.py` (modificato — `_read_protocol_response()` salta le righe non-protocollo; `advance_turn` e `_send_command` lo usano; helper `_terminate_process`)
+- `unciv/Unciv/desktop/src/com/unciv/app/desktop/DesktopLauncher.kt` (modificato — nel branch `--server`, `Log.backend` reindirizzato su **stderr**; fork gitignored → solo locale)
+- `unciv/Unciv.jar` (ricompilato — NON in git)
+- `tests/test_headless.py` (modificato — 2 test: skip rumore log in advance e move)
+
+### Fatto
+- **Python (rete di sicurezza)**: il lettore di risposta ora ignora qualsiasi riga che non inizi con un prefisso valido (`ok `/`error`/`moved `/`illegal`/`legal`/`founded `), saltando i log del JVM intercalati.
+- **Kotlin (fix alla sorgente)**: `Log.backend` impostato su un backend che scrive su `System.err`, così lo stdout resta pulito per il protocollo. (`SoundPlayer` e gli altri `Log.debug` ora vanno su stderr.)
+
+### Test
+- [x] 115/115 test verdi (113 + 2 nuovi skip-noise)
+- [x] Smoke JAR: dopo `READY` lo stdout contiene solo `ok 89`/`ok 90` (nessun log); i log su stderr.
+
+### TODO prossima sessione
+1. Riavviare training col nuovo JAR e verificare che non si ripresenti il crash (girare oltre i ~90k step dove prima si rompeva).
+2. Poi Fase C2 (risorse nell'obs) e C3 (Worker/miglioramenti).
+
+---
+
 ## [2026-05-24] — Sessione 32
 
 ### Obiettivo sessione
