@@ -5,6 +5,28 @@
 
 ---
 
+## [2026-05-24] — Sessione 36
+
+### Obiettivo sessione
+Pianificare il "Worker completo" (miglioramenti generali oltre la connessione risorse).
+
+### File modificati
+- `md_file_x_claude_code/23_worker_full_improvements.md` (creato — spec)
+
+### Fatto
+- Scritta la spec File 23. Risposta alla domanda dell'utente: attualmente il Worker costruisce **solo** il miglioramento che connette la risorsa sul suo tile (C3), non miglioramenti di resa generici, rimozione feature o strade.
+- Design proposto: **Opzione A (consigliata)** — generalizzare l'azione `Improve` esistente (action space invariato a 23) delegando al motore la scelta del miglior miglioramento per il tile (`WorkerAutomation.chooseImprovement`, o euristica semplice); **Opzione B** — set di azioni esplicite (più controllo, action space molto più grande).
+- Con l'Opzione A senza reward/obs extra: unica modifica = Kotlin `improve` + rebuild JAR, nessun cambio di contratto Python. Strade/rete commerciale lasciate fuori scope.
+
+### Test
+- N/A — sessione di pianificazione.
+
+### TODO prossima sessione
+1. Decidere Opzione A vs B per il File 23, poi implementare.
+2. (Prioritario) Riavviare il training (obs 61, action 23) per validare a runtime C1+C2+C3.
+
+---
+
 ## [2026-05-24] — Sessione 35
 
 ### Obiettivo sessione
