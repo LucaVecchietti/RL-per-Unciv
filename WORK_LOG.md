@@ -5,6 +5,33 @@
 
 ---
 
+## [2026-05-26] — Sessione 38
+
+### Obiettivo sessione
+Creare un team di sub-agenti project-scoped per ripartire il lavoro sul progetto.
+
+### File modificati
+- `.claude/agents/unciv-engine.md` (creato — fork Kotlin + headless + JAR + parsing campi save + ruleset)
+- `.claude/agents/rl-trainer.md` (creato — env + reward + masking + costruzione obs + callbacks + training)
+- `.claude/agents/docs-keeper.md` (creato — WORK_LOG + CLAUDE.md + spec)
+- `.claude/agents/tests-engineer.md` (creato — pytest, mock headless, shape asserts, TDD, diagnosi)
+
+### Fatto
+- Definiti 4 sub-agenti con scope chiari e regole di handoff. Confini:
+  - `state_parser.py`: engine possiede il parsing dei campi del save, rl-trainer possiede `to_observation_vector`.
+  - `headless.py`: i wrapper Python li scrive engine quando aggiunge un comando server; rl-trainer li chiama.
+  - Test: tutti gli agenti coordinano con tests-engineer per i test del proprio dominio.
+- Proposta su miglioramenti del team: la 4-agent setup è adatta alla scala attuale; un eventuale `experiments-runner` ha senso solo da Fase 3+ in poi (training multipli per tuning).
+
+### Test
+- N/A — sessione di configurazione (non tocca codice di produzione).
+
+### TODO prossima sessione
+1. Continuare la validazione runtime di C1+C2+C3 (training riavviato col fix di Sessione 37) — controllare metriche e fps.
+2. Se stabile → implementare File 23 (Worker completo, Opzione B).
+
+---
+
 ## [2026-05-24] — Sessione 37
 
 ### Obiettivo sessione
