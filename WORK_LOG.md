@@ -5,6 +5,49 @@
 
 ---
 
+## [2026-05-26] — Sessione 39
+
+### Obiettivo sessione
+Sbloccare il training, in stallo da ~1 giorno (~0 fps): ogni `improve` falliva silenziosamente per timeout 60s, gli stalli si accumulavano e collassavano il throughput.
+
+### Evidenza dai log utente
+- `action_Improve` cresce da 0.0035 (iter 3) a 0.0095 (iter 8) — l'agente ha imparato a usarla.
+- `improvements_built_mean = 0` in TUTTE le iter → ogni improve fallisce (no-op da resilienza Sessione 37).
+- iter 10 → 11: `time_elapsed` +66338s per 4096 step (~16s/step). iter 11 → 12: +69791s. Praticamente bloccato.
+- `units_stuck_mean: 30-40` → anche `legal_moves` probabilmente in timeout su qualche unità.
+
+### File modificati
+- `src/utils/headless.py` (modificato — timeout differenziato: `action_timeout` per comandi-unità, `timeout` per startup/advance; `_read_protocol_response(timeout=…)` accetta override; `_send_command` passa `self.action_timeout`)
+- `config/default_config.yaml` (modificato — `headless_action_timeout: 5`, mentre `headless_timeout: 60` resta per READY e advance)
+- `src/envs/unciv_env.py` (modificato — legge `headless_action_timeout`, lo passa a `UncivHeadless`; masking Improve attivo solo se la risorsa NON è già connessa)
+- `src/parsers/state_parser.py` (modificato — esporta `GameState.resource_connected_tiles: set` per il masking RL-side)
+- `tests/test_env.py` (modificato — nuovo test `test_improve_mask_off_when_resource_already_connected`)
+
+### Fatto
+Tentato di delegare a `unciv-engine` + `rl-trainer` (i due agenti creati nella Sessione 38) ma non sono ancora caricati nella sessione attiva (vengono registrati all'avvio di una nuova sessione Claude Code). Ho fatto io il lavoro inline applicando esattamente i fix che avrei delegato.
+
+- **Engine fix — timeout differenziato**: prima qualunque comando hang costava 60s. Ora i comandi-unità (move/legalmoves/foundcity/improve) hanno timeout **5s** (default `headless_action_timeout` da config). advance resta a 60s (può essere genuinamente lento su save grandi); READY resta a 60s (startup JVM). Atteso: **6–12× riduzione del costo per hang**.
+- **RL mitigation — masking Improve più stretto**: prima Improve era valido su qualunque tile-risorsa Strategic/Luxury. Ora è valido solo su una risorsa **non ancora connessa** (la tile non ha già il miglioramento connettente). Riduce drasticamente i tentativi inutili: una volta connessa, il Worker non riprova; se è già connessa quando ci arriva sopra (es. AI o stato pregresso), non spreca azioni.
+- Esposta `GameState.resource_connected_tiles` (set di posizioni connesse) per il masking. Il parser lo calcola insieme a `connected_strategic/luxury` (logica condivisa).
+
+### Test
+- [x] 126/126 test verdi: `.venv\Scripts\python -m pytest tests/ -q` (125 + 1 nuovo)
+- Test esistenti su timeout (`test_advance_turn_timeout`) restano validi: usano `timeout=1s` sull'instanza, advance legge `self.timeout` (60s di default ma 1s nel test) → comportamento invariato.
+
+### Note / rischi
+- Il root cause Kotlin del hang improve non è ancora isolato; questi fix lo **contengono** (5s no-op invece di 60s) e ne **riducono la frequenza** (mask più stretto). Quando arriveremo al File 23 (Worker completo, Opzione B), rivedremo `improve` con più strumenti.
+- Se in training reale ci sono comandi advance che superano 30-60s su save molto grandi, valutare di alzare `headless_timeout`.
+
+### TODO prossima sessione
+1. Rilanciare il training (nessun rebuild JAR necessario — modifiche solo Python). Monitorare:
+   - `fps` ora dovrebbe essere ≥ a quanto era prima dello stallo (idealmente più alto perché le mosse falliranno più velocemente).
+   - `improvements_built_mean > 0` quando un improve riesce.
+   - `units_stuck_mean` dovrebbe scendere (i timeout su legal_moves costano meno).
+2. Se stabile per ≥50k step → procedere col File 23 (Opzione B).
+3. Gli agenti project-scoped saranno disponibili dalla prossima sessione (`unciv-engine`, `rl-trainer`, `docs-keeper`, `tests-engineer`).
+
+---
+
 ## [2026-05-26] — Sessione 38
 
 ### Obiettivo sessione

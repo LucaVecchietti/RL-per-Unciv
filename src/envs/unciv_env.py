@@ -63,8 +63,11 @@ class UncivEnv(gym.Env):
 
         jar_path = unciv_cfg.get("jar_path", "unciv/Unciv.jar")
         timeout = unciv_cfg.get("headless_timeout", 60)
+        action_timeout = unciv_cfg.get("headless_action_timeout", 5)
         java_path = unciv_cfg.get("java_path", "java")
-        self.headless = UncivHeadless(jar_path=jar_path, timeout=timeout, java_path=java_path)
+        self.headless = UncivHeadless(
+            jar_path=jar_path, timeout=timeout, java_path=java_path, action_timeout=action_timeout
+        )
 
         constructions = load_early_game_constructions(jar_path)
         # File 22 (C2/C3) — mappe risorsa→tipo e risorsa→miglioramento dal ruleset
@@ -261,8 +264,11 @@ class UncivEnv(gym.Env):
                 # FoundCity valido solo per i Settler
                 if unit.name == "Settler":
                     mask[self._found_city_idx] = True
-                # Improve valido solo per i Worker su un tile-risorsa (Strategic/Luxury)
-                if unit.name == "Worker" and (unit.x, unit.y) in self._current_state.resource_tiles:
+                # Improve valido solo per i Worker su un tile-risorsa NON ancora connessa
+                # (riduce tentativi inutili: già connessa = improve no-op + costo timeout)
+                if (unit.name == "Worker"
+                        and (unit.x, unit.y) in self._current_state.resource_tiles
+                        and (unit.x, unit.y) not in self._current_state.resource_connected_tiles):
                     mask[self._improve_idx] = True
         return mask
 

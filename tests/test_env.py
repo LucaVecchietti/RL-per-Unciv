@@ -435,6 +435,21 @@ def test_improve_mask_off_when_worker_not_on_resource(env):
     assert not masks[env._improve_idx]
 
 
+def test_improve_mask_off_when_resource_already_connected(env):
+    """Risorsa già connessa (miglioramento già costruito) → Improve NON valido (no retry inutili)."""
+    worker = UnitState("Worker", x=0, y=0, movement_points=2.0, id=12)
+    state = _mock_state(units=[worker])
+    state.resource_tiles = {(0, 0): "Strategic"}
+    state.resource_connected_tiles = {(0, 0)}  # già connessa
+    env._step_type = "unit"
+    env._pending_units = [worker]
+    env._unit_rotation_index = 0
+    env._current_state = state
+    with patch.object(env.headless, "legal_moves", return_value=[]):
+        masks = env.action_masks()
+    assert not masks[env._improve_idx]
+
+
 def test_apply_improve_increments_counter(env):
     worker = UnitState("Worker", x=0, y=0, movement_points=2.0, id=12)
     env._ep_improvements_built = 0

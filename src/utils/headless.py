@@ -24,9 +24,18 @@ class UncivHeadless:
                        | "illegal <reason>\\n" | "error <msg>\\n"
     """
 
-    def __init__(self, jar_path: str, timeout: int = 60, java_path: str = "java") -> None:
+    def __init__(
+        self,
+        jar_path: str,
+        timeout: int = 60,
+        java_path: str = "java",
+        action_timeout: int = 5,
+    ) -> None:
         self.jar_path = Path(jar_path)
+        # timeout = startup (READY) + advance: comandi che possono essere genuinamente lenti
         self.timeout = timeout
+        # action_timeout = comandi-unità (move/found/improve/legalmoves): normale <1s, oltre = hang quasi certo
+        self.action_timeout = action_timeout
         self.java_path = java_path
         self._process: Optional[subprocess.Popen] = None
         self._lock = threading.Lock()
@@ -64,22 +73,24 @@ class UncivHeadless:
             pass
         self._process = None
 
-    def _read_protocol_response(self) -> str:
+    def _read_protocol_response(self, timeout: Optional[float] = None) -> str:
         """
         Legge righe da stdout finché non arriva una risposta del protocollo,
-        saltando le righe di log asincrone del JVM (es. SoundPlayer$Preloader)
-        che possono intercalarsi e "sporcare" il canale comando→risposta.
+        saltando le righe di log asincrone del JVM (es. SoundPlayer$Preloader).
+
+        `timeout` override (in secondi). Se None, usa `self.timeout` (default).
         """
-        deadline = time.monotonic() + self.timeout
+        eff_timeout = timeout if timeout is not None else self.timeout
+        deadline = time.monotonic() + eff_timeout
         while True:
             remaining = deadline - time.monotonic()
             if remaining <= 0:
                 self._terminate_process()
-                raise TimeoutError(f"JVM server timeout dopo {self.timeout}s")
-            line = self._readline_timeout(self._process.stdout, max(1.0, remaining))
+                raise TimeoutError(f"JVM server timeout dopo {eff_timeout}s")
+            line = self._readline_timeout(self._process.stdout, max(0.5, remaining))
             if line is None or line == "":
                 self._terminate_process()
-                raise TimeoutError(f"JVM server timeout/EOF dopo {self.timeout}s")
+                raise TimeoutError(f"JVM server timeout/EOF dopo {eff_timeout}s")
             stripped = line.strip()
             if stripped.startswith(self._RESPONSE_PREFIXES):
                 return stripped
@@ -156,7 +167,8 @@ class UncivHeadless:
             self._process.stdin.write(command + "\n")
             self._process.stdin.flush()
             try:
-                return self._read_protocol_response()
+                # comandi-unità (move/legalmoves/foundcity/improve/build_improvement): timeout corto
+                return self._read_protocol_response(timeout=self.action_timeout)
             except TimeoutError:
                 # JVM bloccata o morta su questo comando: è già stata terminata
                 # (verrà riavviata al prossimo comando). Restituisce un esito di errore

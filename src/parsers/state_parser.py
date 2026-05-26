@@ -125,6 +125,8 @@ class GameState:
     # File 22 (C3) — risorse connesse (nel territorio + miglioramento giusto costruito)
     connected_strategic: int = 0
     connected_luxury: int = 0
+    # File 22 (C3) — posizioni delle risorse già connesse (per maschera Improve mirata)
+    resource_connected_tiles: set = field(default_factory=set)
 
 
 class UncivStateParser:
@@ -295,6 +297,7 @@ class UncivStateParser:
             resource_tiles=resource_tiles,
             connected_strategic=connected_strategic,
             connected_luxury=connected_luxury,
+            resource_connected_tiles=resource_connected,
         )
 
     def _find_player_civ(self, raw: dict) -> dict:

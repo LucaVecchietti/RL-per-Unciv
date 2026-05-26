@@ -22,7 +22,8 @@ paths:
 unciv:
   jar_path: "unciv/Unciv.jar"
   java_path: "java"               # usa il java sul PATH (reinstallare JDK 21+ con winget)
-  headless_timeout: 60            # secondi max per turno (JVM startup ~5s)
+  headless_timeout: 60            # secondi max per startup READY e per advance (turn processing)
+  headless_action_timeout: 5      # secondi max per comandi-unità (move/found/improve/legalmoves): normale <1s, oltre = hang
   saves_prefix: "current_game"    # prefisso save files paralleli
 
 reward:
