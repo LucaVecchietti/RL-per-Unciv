@@ -5,6 +5,59 @@
 
 ---
 
+## [2026-05-30] — Sessione 42 — Pianificazione File 24 + File 25
+
+### Obiettivo sessione
+Pianificare due nuovi file di spec mentre il training di validazione (post-fix Sessione 40+41) gira:
+- **File 24** — comando `buildroad` + reward rete commerciale città↔capitale
+- **File 25** — gestione popolazione città (focus + worked tiles fine)
+
+### File modificati
+- `md_file_x_claude_code/24_buildroad.md` (creato — 143 righe)
+- `md_file_x_claude_code/25_city_population.md` (creato — 163 righe, poi corretto a 8 focus invece di 6)
+
+### Metodo
+Skill `/team plan` (prima invocazione dopo creazione Sessione 41). Discovery in parallelo dei 4 sub-agenti, ognuno con brief specifico per entrambi i file:
+- `unciv-engine`: inventario tecnico Kotlin (API, campi save serializzati vs @Transient, comandi server proposti). Vedi `CivInfoTransientCache.kt:46`, `City.kt:158` (proxy serializzabile `connectedToCapitalStatus`), `CityPopulationManager.kt:158-215` (`autoAssignPopulation`).
+- `rl-trainer`: proposte obs/action/masking/reward/metriche. Reward event-based per File 24, invariata per File 25.
+- `tests-engineer`: lista test richiesti per ciascun file (headless + env + parser + reward + smoke).
+- `docs-keeper`: convenzioni di formato (allineate a File 22/23), stato CLAUDE.md, numerazione (24, 25 senza gap).
+
+### Scelte confermate dall'utente
+**File 24**:
+- Comando server: **`buildroad <path> <unitId>`** dedicato (non estensione di `improve`)
+- Reward: **solo `city_connected_to_capital = 4.0` event-based** (no reward denso su road_built)
+- Obs: +3 globali → `(61,) → (64,)`
+- Action: +1 `BUILD_ROAD`
+
+**File 25**:
+- Granularità: **Focus + worktile fine (entrambi)** — controllo a due livelli
+- **8 azioni `SET_FOCUS_*`** allineate alla UI Unciv (Food/Production/Gold/Science/Culture/Faith/GoldGrowth/ProductionGrowth — esclusi Default e Manuale meta-modi, e Happiness che non è tra gli 8 focus UI). Correzione applicata dopo due round di feedback utente: prima "le azioni di focus sono 8 non 6", poi "non esclude science".
+- +18 azioni `WORK_TILE_<clock>` toggle, disponibili solo se `cityAIFocus = Manual`
+- Action space: `Discrete(24+N) → Discrete(50+N)` (post File 24)
+- Obs MVP: `(64,) → (82,)` (focus_one_hot + free_pop per 2 città). Estensione: `(82,) → (100,)` (worked_tile_mask città selezionata).
+- Reward: **invariata** (segnale indiretto via metriche esistenti)
+
+**Ordine implementazione**: 24 prima di 25.
+
+### Test
+N/A — sessione di pianificazione (no codice).
+
+### Note / dipendenze
+- File 24 era già citato come fuori scope esplicito in `23_worker_full_improvements.md:121-122`.
+- File 25 è scope nuovo, non precedentemente tracciato (segnalato nella spec).
+- Entrambi richiedono **rebuild JAR** (nuovi comandi Kotlin).
+- Limite noto File 24: `City.connectedToCapitalStatus` viene aggiornato a `startTurn` successivo (non istantaneo dopo `buildroad`) — reward arriva 1 turno dopo.
+- Decisione di disabilitazione AI cittadina File 25: implicita lato motore (`worktile` imposta `cityAIFocus=Manual`). Le 8 `SET_FOCUS_*` riattivano `autoAssignPopulation` con priorità diversa.
+
+### TODO prossima sessione
+1. Aspettare metriche training corrente (post-fix Sessione 40+41). Atteso: `improvements_built_mean > 0`, `connected_resources_mean` in crescita, `units_stuck_mean` in calo.
+2. Se stabile per ≥100k step → **implementare File 23** (Worker completo, Opzione B) con `/team implement`.
+3. Dopo File 23 stabile → implementare File 24 (`buildroad`).
+4. Dopo File 24 stabile → implementare File 25 (popolazione città).
+
+---
+
 ## [2026-05-30] — Sessione 41
 
 ### Obiettivo sessione
