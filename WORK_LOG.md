@@ -5,6 +5,49 @@
 
 ---
 
+## [2026-05-30] — Sessione 40
+
+### Obiettivo sessione
+Trovare e fixare il root cause del "hang" del comando `improve`. Nel training #20 (500k step, ~3h30) `improvements_built_mean=0` per **tutto** il training, `units_stuck_mean` esploso 23 → 275, `connected_resources_mean` 0.75 → 0.
+
+### Root cause (trovato da sub-agent `unciv-engine`)
+**Non era un hang nel motore Kotlin**. Il server JVM eseguiva `improve` correttamente, scriveva il save, e stampava `improving <name> <turns>` su stdout. Il bug era lato Python: `src/utils/headless.py:66` definiva `_RESPONSE_PREFIXES = ("ok ", "error", "moved ", "illegal", "legal", "founded ")` — **mancava `"improving "`**. `_read_protocol_response` quindi scartava la risposta valida come "riga di log", continuava a leggere, finiva in timeout 5s, ritornava `"error timeout"` e uccideva la JVM.
+
+Effetto a catena:
+- ogni Improve marcata fallita → reward 0 → `improvements_built_mean=0`
+- JVM killata → riavviata su save fresco → progresso C2/C3 perso → `connected_resources_mean → 0`
+- Worker dopo "improve fallita" restava a lavorare nel save scritto (la Kotlin l'aveva applicata!) ma Python lo contava come no-op → `units_stuck_mean` cresceva linearmente
+
+### File modificati
+- `src/utils/headless.py` (modificato — aggiunto `"improving "` a `_RESPONSE_PREFIXES`)
+- `tests/test_headless.py` (modificato — 3 nuovi test: `test_build_improvement_success`, `test_build_improvement_illegal`, `test_build_improvement_skips_log_noise`)
+
+### Test
+- [x] 129/129 verdi: `.venv\Scripts\python -m pytest tests/ -q` (126 + 3 nuovi)
+
+### Metodo usato
+- Sub-agent `unciv-engine`: analisi del comando `improve` in DesktopLauncher.kt:193-226, mappatura di tutte le chiamate interne (tutte sincrone, niente animazioni/popup/I/O bloccante), confronto con `_RESPONSE_PREFIXES`. Ha isolato il bug in ~5 minuti con confidenza ~95%.
+- Sub-agent `rl-trainer`: piano repro indipendente (cattura save su timeout in `Temp/improve_repro/`). Confermato il mismatch tra prefisso emesso lato Kotlin e prefissi accettati lato Python.
+- Approccio in parallelo ha confermato il root cause da due angolazioni indipendenti senza falsi positivi.
+
+### Note / impatti attesi nel prossimo training
+- `improvements_built_mean` dovrebbe salire > 0 fin dalle prime iterazioni (il masking di Sessione 39 garantisce che Improve venga emessa solo su tile-risorsa non connessa).
+- `connected_resources_mean` dovrebbe crescere stabilmente.
+- `units_stuck_mean` dovrebbe scendere (Worker non più "fantasma" che lavora senza che Python lo sappia).
+- `fps` invariato o leggermente migliore (un Improve riuscito costa <1s vs i 5s del timeout).
+- Reward dovrebbe iniziare a salire grazie al bonus `resource_connected: 3.0`.
+
+### TODO prossima sessione
+1. **Rilanciare il training** (nessun rebuild JAR necessario — modifiche solo Python). Confronto atteso con run #20:
+   - `improvements_built_mean`: 0 → > 0 (atteso almeno qualche unità per episodio)
+   - `connected_resources_mean`: 0 → trend crescente
+   - `units_stuck_mean`: 275 → in calo
+   - `ep_rew_mean`: 170 → trend crescente (presumibilmente)
+2. Se stabile per ≥100k step e improvements_built > 0 → procedere col **File 23 (Worker completo, Opzione B)**: comando Kotlin `improve <nome>`, action space dinamica `BUILD_<improvement>` da ruleset.
+3. Se ancora qualcosa va storto, riprendere la cattura repro proposta da `rl-trainer` (salvare save in `Temp/improve_repro/` sui fallimenti residui).
+
+---
+
 ## [2026-05-26] — Sessione 39
 
 ### Obiettivo sessione

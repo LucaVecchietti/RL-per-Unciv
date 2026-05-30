@@ -63,7 +63,7 @@ class UncivHeadless:
 
     # Prefissi delle risposte valide del protocollo. Tutto il resto su stdout
     # (log del JVM, es. SoundPlayer$Preloader) va ignorato.
-    _RESPONSE_PREFIXES = ("ok ", "error", "moved ", "illegal", "legal", "founded ")
+    _RESPONSE_PREFIXES = ("ok ", "error", "moved ", "illegal", "legal", "founded ", "improving ")
 
     def _terminate_process(self) -> None:
         """Termina il processo JVM e azzera il riferimento."""
