@@ -281,3 +281,38 @@ def test_build_improvement_skips_log_noise(headless, tmp_path):
         result = headless.build_improvement(save, 12)
     assert result["success"] is True
     assert result["improvement"] == "Farm"
+
+
+def test_build_improvement_multi_word_name(headless, tmp_path):
+    """Nomi miglioramenti multi-token (es. 'Oil well') vanno parsati come stringa intera."""
+    save = tmp_path / "game.json"
+    save.write_text('{"turns": 2}')
+    mock_proc = _make_popen_mock(["improving Oil well 5"])
+    with patch("subprocess.Popen", return_value=mock_proc):
+        result = headless.build_improvement(save, 12)
+    assert result["success"] is True
+    assert result["improvement"] == "Oil well"
+    assert result["turns"] == 5
+
+
+def test_build_improvement_multi_word_three_tokens(headless, tmp_path):
+    """Robustezza: nome a 3 token (es. 'Trading Post Foo')."""
+    save = tmp_path / "game.json"
+    save.write_text('{"turns": 2}')
+    mock_proc = _make_popen_mock(["improving Trading Post Foo 12"])
+    with patch("subprocess.Popen", return_value=mock_proc):
+        result = headless.build_improvement(save, 12)
+    assert result["success"] is True
+    assert result["improvement"] == "Trading Post Foo"
+    assert result["turns"] == 12
+
+
+def test_build_improvement_malformed_no_turns(headless, tmp_path):
+    """Risposta 'improving Farm' senza turni: non deve crashare."""
+    save = tmp_path / "game.json"
+    save.write_text('{"turns": 2}')
+    mock_proc = _make_popen_mock(["improving Farm"])
+    with patch("subprocess.Popen", return_value=mock_proc):
+        result = headless.build_improvement(save, 12)
+    assert result["success"] is False
+    assert "malformata" in result["reason"]

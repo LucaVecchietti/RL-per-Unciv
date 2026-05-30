@@ -224,7 +224,15 @@ class UncivHeadless:
         response = self._send_command(f"improve {save_path.as_posix()} {unit_id}")
         if response.startswith("improving "):
             parts = response.split()
-            return {"success": True, "improvement": parts[1], "turns": int(parts[2])}
+            # Il nome del miglioramento può contenere spazi (es. "Oil well").
+            # Protocollo: parts[0]="improving", parts[-1]=turni, parts[1:-1]=nome.
+            if len(parts) >= 3:
+                try:
+                    turns = int(parts[-1])
+                except ValueError:
+                    return {"success": False, "reason": f"risposta improving malformata: {response!r}"}
+                return {"success": True, "improvement": " ".join(parts[1:-1]), "turns": turns}
+            return {"success": False, "reason": f"risposta improving malformata: {response!r}"}
         return {"success": False, "reason": response}
 
     def found_city(self, save_path: Path, unit_id: int) -> dict:

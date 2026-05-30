@@ -5,6 +5,38 @@
 
 ---
 
+## [2026-05-30] — Sessione 41
+
+### Obiettivo sessione
+1. Creare una skill `/team` che orchestra i 4 sub-agenti project-scoped in due modalità (`implement` / `plan`).
+2. Fixare un crash del training emerso al primo `improve` reale dopo il fix di Sessione 40: `ValueError: invalid literal for int() with base 10: 'well'` su risposta JVM `improving Oil well 5`.
+
+### File modificati
+- `.claude/skills/team/SKILL.md` (creato — skill `/team` con modalità `implement <task>` e `plan`, tabella routing agenti/dominio, regole anti-deriva, contesto progetto)
+- `src/utils/headless.py` (modificato — `build_improvement` parsa nomi multi-token: `parts[-1]=turni`, `parts[1:-1]=nome` con `" ".join`; aggiunti guardrail su risposte malformate)
+- `tests/test_headless.py` (modificato — 3 nuovi test: nome multi-word a 2 token, multi-word a 3 token, risposta malformata)
+
+### Root cause del crash
+`DesktopLauncher.kt:217` stampa `println("improving ${improvement.name} ${tile.turnsToImprovement}")`. Quando `improvement.name` contiene spazi (es. "Oil well"), la risposta è `improving Oil well 5` e il vecchio parsing `parts[2]` prendeva "well" invece dei turni. Fix puramente lato Python (no rebuild JAR): l'ultimo token è sempre il numero, il nome è tutto quello in mezzo.
+
+### Test
+- [x] 132/132 verdi: `.venv\Scripts\python -m pytest tests/ -q` (129 + 3 nuovi)
+
+### Note / impatti
+- Il training crashava al primo improve reale di un'unità su tile-risorsa con miglioramento multi-word (probabilmente "Oil well" su tile Oil). Ora il parser lo gestisce.
+- La skill `/team` sarà invocabile dalla prossima sessione (Claude Code carica le skill all'avvio).
+
+### TODO prossima sessione
+1. **Rilanciare il training** (nessun rebuild JAR — solo Python). Stesse metriche di Sessione 40 da monitorare:
+   - `improvements_built_mean > 0` fin dalle prime iter
+   - `connected_resources_mean` in crescita
+   - `units_stuck_mean` in calo da 275
+   - `ep_rew_mean` finalmente in salita
+2. Se stabile per ≥100k step → procedere col **File 23 (Worker completo, Opzione B)**.
+3. Provare la skill `/team plan` per scrivere il File 24 quando il training sarà stabile.
+
+---
+
 ## [2026-05-30] — Sessione 40
 
 ### Obiettivo sessione
