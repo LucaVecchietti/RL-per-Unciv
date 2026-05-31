@@ -97,7 +97,12 @@ def test_action_masks_city_step(env):
     masks = env.action_masks()
     assert masks.shape == (11,)
     assert masks.dtype == bool
-    assert all(masks[0:7])
+    # Building+unit disponibili (indici 0..5: 4 buildings + 2 units).
+    assert all(masks[0:6])
+    # Skip (indice 6): Sessione 46 Fix #3 — mascherato se coda vuota E alternative.
+    # CityState.construction_queue_empty default True → skip masked.
+    assert not masks[6]
+    # MOVE non disponibili in city step.
     assert not any(masks[7:11])
 
 
@@ -141,8 +146,39 @@ def test_mask_library_available_with_writing(env):
     assert env.action_masks()[_get_idx(env, "Library")]
 
 
-def test_mask_skip_always_true_city_step(env):
+def test_mask_skip_available_when_queue_not_empty_city_step(env):
+    """Sessione 46 Fix #3: skip disponibile se la coda di costruzione non è vuota."""
     _setup_masking(env, techs_researched=[], built_buildings=["Monument"])
+    env._current_state.cities[0].construction_queue_empty = False
+    assert env.action_masks()[env._skip_idx]
+
+
+def test_mask_skip_masked_when_queue_empty_and_alternatives(env):
+    """Sessione 46 Fix #3: skip mascherato se coda vuota E ci sono alternative valide."""
+    _setup_masking(env, techs_researched=["Pottery", "Writing"], built_buildings=[])
+    env._current_state.cities[0].construction_queue_empty = True
+    assert not env.action_masks()[env._skip_idx]
+
+
+def test_mask_skip_available_when_queue_empty_no_alternatives(env):
+    """Sessione 46 Fix #3: fallback — skip resta disponibile se nessun building/unit valido."""
+    # Tutti i building già built + tech vuoto + nessuna unit producibile.
+    _setup_masking(
+        env, techs_researched=[],
+        built_buildings=["Monument", "Granary", "Library", "Barracks"],
+    )
+    env._current_state.cities[0].construction_queue_empty = True
+    # Settler/Warrior potrebbero essere ancora disponibili (no tech req in mock);
+    # questo test verifica che IL FALLBACK funzioni: se NESSUN building/unit valido,
+    # skip resta True. Per garantire no alternative, sbianchiamo unit_names.
+    env._unit_names = set()
+    env.ACTION_MAP = {
+        i: n for i, n in enumerate(
+            sorted(env._building_names) + [None] + ["MOVE_NORTH", "MOVE_SOUTH"]
+        )
+    }
+    env._skip_idx = next(i for i, n in env.ACTION_MAP.items() if n is None)
+    env._move_start_idx = env._skip_idx + 1
     assert env.action_masks()[env._skip_idx]
 
 

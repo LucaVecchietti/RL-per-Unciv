@@ -6,8 +6,9 @@ import yaml
 import json
 
 from src.parsers.state_parser import UncivStateParser, GameState, UnitState, _TECH_COSTS
-from src.utils.reward import compute_reward, compute_terminal_reward
+from src.utils.reward import compute_reward, compute_terminal_reward, REWARD_WEIGHTS
 from src.utils.headless import UncivHeadless
+from src.utils import ruleset_reader as _ruleset_reader
 from src.utils.ruleset_reader import (
     load_early_game_constructions,
     load_tech_prereqs,
@@ -77,6 +78,23 @@ class UncivEnv(gym.Env):
         self._tech_prereqs: dict[str, list[str]] = load_tech_prereqs(jar_path)
         self._unit_names: set[str] = {c.name for c in constructions if c.is_unit}
         self._building_names: set[str] = {c.name for c in constructions if not c.is_unit}
+
+        # Fix #2 — vincoli di costruzione dal ruleset (required_building, required_nearby_resources,
+        # required_resources, annexed_only). La dipendenza `load_building_constraints` è fornita da
+        # `unciv-engine`: se non ancora disponibile, fallback a dict vuoto (comportamento legacy).
+        # TODO: una volta integrata la dipendenza, rimuovere il getattr e importare la funzione direttamente.
+        _load_constraints = getattr(_ruleset_reader, "load_building_constraints", None)
+        self._building_constraints: dict[str, dict] = (
+            _load_constraints(jar_path) if callable(_load_constraints) else {}
+        )
+
+        # Fix #1 — merge pesi reward: defaults di `REWARD_WEIGHTS` + override da yaml `reward:`.
+        # I valori del yaml hanno precedenza. Senza questo merge, le chiamate a compute_reward
+        # senza `weights=` ricadrebbero sui default ignorando la configurazione utente.
+        self._reward_weights: dict[str, float] = dict(REWARD_WEIGHTS)
+        yaml_reward_weights = self.config.get("reward", {}) or {}
+        for _k, _v in yaml_reward_weights.items():
+            self._reward_weights[_k] = _v
 
         buildings = sorted(self._building_names)
         units = sorted(self._unit_names)
@@ -245,18 +263,81 @@ class UncivEnv(gym.Env):
             elif state.cities:
                 city = state.cities[0]
             built = set(city.built_buildings) if city else set()
+            # Fix #2/#3 — costruiamo la maschera in due passi:
+            # 1) tutte le azioni non-skip (building/unit/FoundCity/Improve/MOVE_*)
+            # 2) decisione sullo skip in base alle altre azioni valide e allo stato della coda
+            # Annotazione "città annessa" arriva da unciv-engine via GameState.annexed_cities (Fix #2).
+            # Se ancora non disponibile, fallback insieme vuoto (nessuna città è annessa).
+            annexed_cities: set[str] = getattr(state, "annexed_cities", set()) or set()
+            # Aggregato civ-level dei nomi di risorse connesse (Strategic + Luxury) per controllo
+            # `required_nearby_resources`. NOTA TODO: fallback liberale — non controlliamo la distanza
+            # esatta (entro 2 caselle dalla città) perché `resource_tiles` mappa (x,y)→tipo, non→nome.
+            # Verifichiamo solo che la risorsa sia connessa da una qualunque città della civ.
+            connected_resource_names: set[str] = set()
+            connected_resource_names.update(
+                n for n, amt in (state.strategic_resources or {}).items() if amt > 0
+            )
+            connected_resource_names.update(
+                n for n, amt in (state.luxury_resources or {}).items() if amt > 0
+            )
+
             for i, name in self.ACTION_MAP.items():
                 if name is None:
-                    mask[i] = True
-                elif name == "FoundCity" or name == "Improve" or name.startswith("MOVE_"):
+                    # skip — decisione differita al post-process (Fix #3)
+                    continue
+                if name == "FoundCity" or name == "Improve" or name.startswith("MOVE_"):
                     mask[i] = False
+                    continue
+                req = self._prereq_map.get(name)
+                tech_ok = req is None or req in state.techs_researched
+                if name in self._building_names:
+                    if not (tech_ok and name not in built):
+                        mask[i] = False
+                        continue
+                    # Fix #2 — vincoli aggiuntivi dal ruleset (required_building,
+                    # required_nearby_resources, annexed_only).
+                    constraints = self._building_constraints.get(name, {}) or {}
+
+                    # (a) Required building: edificio prerequisito presente nella stessa città.
+                    req_b = constraints.get("required_building")
+                    if req_b is not None and req_b not in built:
+                        mask[i] = False
+                        continue
+
+                    # (b) Required nearby improved resources: almeno una delle risorse
+                    # richieste deve essere connessa nella civ.
+                    # TODO: controllo distanza esatto (entro 2 tile dalla città) non possibile
+                    # finché `resource_tiles` non espone i nomi delle risorse, non solo i tipi.
+                    req_res = constraints.get("required_nearby_resources") or []
+                    if req_res and not any(r in connected_resource_names for r in req_res):
+                        mask[i] = False
+                        continue
+
+                    # (c) Annexed only: edificio costruibile solo in città annesse.
+                    if constraints.get("annexed_only", False) and (
+                        city is None or city.name not in annexed_cities
+                    ):
+                        mask[i] = False
+                        continue
+
+                    mask[i] = True
                 else:
-                    req = self._prereq_map.get(name)
-                    tech_ok = req is None or req in state.techs_researched
-                    if name in self._building_names:
-                        mask[i] = tech_ok and name not in built
-                    else:
-                        mask[i] = tech_ok
+                    # unità: solo prereq tech
+                    mask[i] = tech_ok
+
+            # Fix #3 — Skip post-process: se la coda di costruzione è vuota E almeno
+            # un'altra azione (building/unit) è valida, mascheriamo lo skip per forzare
+            # l'agente a scegliere. Altrimenti skip resta disponibile (anti-deadlock).
+            # `construction_queue_empty` è fornito da unciv-engine via CityState; in attesa
+            # della dipendenza, default False (skip sempre disponibile = comportamento legacy).
+            queue_empty = bool(getattr(city, "construction_queue_empty", False)) if city else False
+            construction_actions_valid = bool(
+                mask[: self._n_construction_actions].any()
+            )
+            if queue_empty and construction_actions_valid:
+                mask[self._skip_idx] = False
+            else:
+                mask[self._skip_idx] = True
         elif self._step_type == "unit":
             mask[self._skip_idx] = True  # skip sempre valido (anti-deadlock)
             unit = None
@@ -537,8 +618,12 @@ class UncivEnv(gym.Env):
         self.headless.advance_turn(self.save_path)
 
     def _compute_reward(self, prev: Optional[GameState], curr: GameState, action: int) -> float:
-        """Delega a src/utils/reward.compute_reward."""
-        return compute_reward(prev, curr, action, skip_action_idx=self._skip_idx)
+        """Delega a src/utils/reward.compute_reward, passando i pesi mergiati da yaml (Fix #1)."""
+        return compute_reward(
+            prev, curr, action,
+            weights=self._reward_weights,
+            skip_action_idx=self._skip_idx,
+        )
 
     def _is_terminated(self) -> bool:
         """L'episodio termina se happiness scende sotto soglia critica."""

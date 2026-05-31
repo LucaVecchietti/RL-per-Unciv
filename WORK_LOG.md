@@ -5,6 +5,53 @@
 
 ---
 
+## [2026-05-31] — Sessione 46 — Fix 3 bug strutturali diagnosticati post Run #28
+
+### Obiettivo sessione
+Diagnosi Run #28 (500k step, eval reward 261, ma con effetti collaterali gravi: spam Scout/Spearman, happiness negativo, gold cronicamente -200, Temple/Stable/Courthouse mai costruiti, coda costruzione svuotata). Discovery con `rl-trainer` + `unciv-engine` ha identificato **3 bug strutturali bloccanti** prima di qualsiasi tuning ulteriore.
+
+### Bug scoperti
+1. **`weights` ignorato a runtime**: `unciv_env.py:541` chiamava `compute_reward(...)` senza `weights=`, usando i default di `REWARD_WEIGHTS` invece dei valori in `config/default_config.yaml`. Tutti i pesi modificati dall'utente nel yaml (found_city=10.0, *_accumulated=2.5, ecc.) non avevano effetto sul training.
+2. **Masking permissivo**: `action_masks()` controllava solo `tech_ok and name not in built`, ignorando `requiredBuilding` (es. Temple richiede Monument), `requiredNearbyImprovedResources` (es. Stable richiede Horses/Sheep/Cattle), e `uniques` come "Can only be built <in [Annexed] cities>" (Courthouse). L'agente sceglieva azioni che la JVM rifiutava silenziosamente → `built_temple/stable/courthouse=0` per tutto Run #28.
+3. **Coda costruzione svuotata**: `_apply_action` settava `currentConstructionIsUserSet=True` disabilitando la `chooseNextConstruction` di Unciv, MA permetteva all'agente di skippare lo step città anche con coda vuota → città in idle.
+
+### File modificati
+- `src/utils/ruleset_reader.py` (modificato — nuova funzione `load_building_constraints(jar_path)` ritorna dict con `required_building`, `required_nearby_resources`, `required_resources`, `annexed_only` per ognuno dei building del set Ancient+Classical)
+- `src/parsers/state_parser.py` (modificato — `CityState.construction_queue_empty: bool` popolato da `cityConstructions.constructionQueue`; `GameState.annexed_cities: set` lasciato vuoto con TODO documentato — Fase 2 senza nemici, nessuna città è annessa)
+- `src/envs/unciv_env.py` (modificato — Fix #1: merge `REWARD_WEIGHTS` default + `config["reward"]` in `self._reward_weights`, passato a ogni `compute_reward`. Fix #2: masking esteso con `required_building`, `required_nearby_resources` (fallback liberale civ-wide), `annexed_only`. Fix #3: post-process skip masked se `construction_queue_empty=True` E ≥1 building/unit valido)
+- `tests/test_env.py` (modificato — 2 test legacy aggiornati al nuovo comportamento + 3 nuovi test per Fix #3 skip masking)
+
+### Metodo
+Skill `/team implement`. Tre agenti in parallelo:
+- `unciv-engine`: ruleset + parser extension
+- `rl-trainer`: 3 fix integrati in `unciv_env.py`
+- `tests-engineer`: bloccato (vedeva file pre-edit), fix manuale dei test legacy applicato inline.
+
+### Test
+- [x] 164/164 verdi (162 baseline + 2 test skip masking nuovi)
+
+### Risultati attesi nel prossimo training
+- I pesi del yaml (modificati dall'utente) finalmente attivi → effetto reale dell'aggressività dei pesi visibile.
+- `built_temple_mean > 0` quando l'agente costruisce Monument prima.
+- `built_stable_mean > 0` quando Horses/Sheep/Cattle vicini connessi.
+- `built_courthouse_mean = 0` ATTESO (no città annesse in Fase 2).
+- Città mai in idle (coda piena sempre).
+
+### TODO prossima sessione
+1. **Run validazione 50-100k step** col codice fixato. Atteso: cambio comportamento drastico se i pesi yaml gonfiati prendono effetto.
+2. **Pianificare File 26.1** (con `/team plan`):
+   - Penalty militare cumulativa (`0.5 * max(0, n_military - 2*n_cities)`)
+   - Milestone reward terminal (+5 per ogni 200 science/cultura/gold accumulati)
+   - Estensione building set Phase A+B+C: TUTTI i ~30 building Ancient+Classical+Medieval + 5 wonders iconiche (Pyramids, Stonehenge, Great Library, Oracle, Hanging Gardens)
+3. **File 26 (tech management)** rimane in coda — sblocco vero per techs_mean>18.
+
+### Note / TODO documentati nel codice
+- `required_nearby_resources` usa fallback **liberale** (la risorsa è considerata disponibile se connessa civ-wide, non a distanza esatta dalla città). Quando il parser esporrà i nomi delle risorse per posizione, sostituire con check geometrico.
+- `annexed_cities` resta `set()` finché non implementiamo combattimento (Fase 3) — Courthouse impossibile in Fase 2 by design.
+- `compute_terminal_reward` non riceve weights (firma attuale non li accetta) — da estendere in File 26.1 con milestone reward.
+
+---
+
 ## [2026-05-31] — Sessione 45.1 — Tuning reward post Run #23 (stallo cities_founded)
 
 ### Obiettivo sessione

@@ -103,6 +103,66 @@ def load_resource_improvements(jar_path: str) -> dict[str, str]:
     return result
 
 
+def load_building_constraints(jar_path: str) -> dict[str, dict]:
+    """
+    Estrae i constraint di prerequisito per il masking RL dei building azione.
+
+    Limita lo scan ai building che il selettore di azioni (load_early_game_constructions)
+    espone (eras Ancient+Classical, post _BUILDING_EXCLUDE), così la mappa è 1:1 con
+    le 9 building actions dell'env.
+
+    Returns:
+        {
+          building_name: {
+            "required_building":         Optional[str]  (None se assente),
+            "required_nearby_resources": list[str]      (resource names, vuoto se assente),
+            "required_resources":        list[str]      (resource sotto la citta', vuoto se assente),
+            "annexed_only":              bool           (True se uniques contiene
+                                                         "Can only be built" + "Annexed"),
+          }
+        }
+    """
+    ac_techs = get_ancient_classical_techs(jar_path)
+
+    with zipfile.ZipFile(jar_path, "r") as jar:
+        buildings_data = _load_jsonc(jar, _BUILDINGS_PATH)
+
+    result: dict[str, dict] = {}
+    for b in buildings_data:
+        name = b.get("name", "")
+        if not name or name in _BUILDING_EXCLUDE:
+            continue
+        if b.get("isWonder", False) or b.get("isNationalWonder", False):
+            continue
+        if b.get("uniqueTo"):
+            continue
+        req_tech = b.get("requiredTech")
+        if req_tech is not None and req_tech not in ac_techs:
+            continue
+
+        # requiredResource puo' essere stringa singola o lista (per safety entrambi)
+        req_res_raw = b.get("requiredResource")
+        if req_res_raw is None:
+            required_resources: list[str] = []
+        elif isinstance(req_res_raw, list):
+            required_resources = list(req_res_raw)
+        else:
+            required_resources = [str(req_res_raw)]
+
+        uniques = b.get("uniques", []) or []
+        annexed_only = any(
+            ("Can only be built" in u) and ("Annexed" in u) for u in uniques
+        )
+
+        result[name] = {
+            "required_building": b.get("requiredBuilding"),
+            "required_nearby_resources": list(b.get("requiredNearbyImprovedResources", []) or []),
+            "required_resources": required_resources,
+            "annexed_only": annexed_only,
+        }
+    return result
+
+
 def load_early_game_constructions(jar_path: str) -> list[ConstructionInfo]:
     """
     Read buildings + units from the Unciv JAR, return Ancient + Classical constructions.

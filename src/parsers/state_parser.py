@@ -89,6 +89,11 @@ class CityState:
     territory_luxury: int = 0
     # File 23.1 — risorse Bonus nel territorio (parallelo a strategic/luxury)
     territory_bonus: int = 0
+    # Sessione 46 — coda di costruzione vuota: True se constructionQueue è vuota
+    # oppure contiene solo "Nothing" (PerpetualConstruction.idle, cfr. IConstruction.kt:303).
+    # Le altre perpetual (Science/Gold conversion) NON contano come empty perché sono
+    # lavoro reale che il city manager sta facendo.
+    construction_queue_empty: bool = True
 
 
 @dataclass
@@ -136,6 +141,13 @@ class GameState:
     # TODO: parsing faith — il save espone solo civ.religionManager.storedFaith,
     # non c'è un faithPerTurn diretto: serve un meccanismo delta lato UncivEnv come per stored_culture.
     faith_per_turn: float = 0.0
+    # Sessione 46 — set dei nomi città annesse (per masking building "Annexed only" come Courthouse).
+    # TODO: il save Unciv non espone un flag esplicito "annessa" per le città auto-fondate;
+    # i campi candidati (isPuppet, wasPreviouslyConquered, isOriginalCapital=false) non bastano
+    # a distinguere annessa-da-conquista da fondata-poi-spostata-capitale. In Fase 2 (India senza
+    # nemici) tutte le città sono auto-fondate quindi nessuna è annessa → set() è corretto.
+    # Da rivedere quando entrerà il combattimento (Fase 3).
+    annexed_cities: set = field(default_factory=set)
 
 
 class UncivStateParser:
@@ -345,6 +357,13 @@ class UncivStateParser:
         production_stored = float(in_progress.get(current_construction, 0))
         current_construction_cost = float(_CONSTRUCTION_COSTS.get(current_construction, 60.0))
 
+        # Sessione 46 — coda vuota: nessun item OR solo "Nothing" (PerpetualConstruction.idle).
+        # Le altre perpetual (Science/Gold conversion) sono lavoro reale → coda NON vuota.
+        construction_queue_empty = (
+            not queue
+            or all(item == 'Nothing' for item in queue)
+        )
+
         built: list[str] = cc.get('builtBuildings', [])
         tiles_worked = len(city_raw.get('workedTiles', []))
         tiles_count = len(city_raw.get('tiles', []))
@@ -368,6 +387,7 @@ class UncivStateParser:
             tiles_worked=tiles_worked,
             x=int(loc.get('x', 0)),
             y=int(loc.get('y', 0)),
+            construction_queue_empty=construction_queue_empty,
         )
 
     def _parse_units(self, tile_list: list) -> list[UnitState]:
