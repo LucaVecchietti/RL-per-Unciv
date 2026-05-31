@@ -5,6 +5,79 @@
 
 ---
 
+## [2026-05-31] — Sessione 44 — Pianificazione File 26 (tech management)
+
+### Obiettivo sessione
+Pianificare File 26: dare all'agente il controllo esplicito della scelta tech invece di lasciarla all'auto-picker alfabetico, sbloccare tutto il tech tree (74 tech), aggiungere `era_one_hot` in obs.
+
+### Metodo (skill `/team plan`)
+Discovery in parallelo `unciv-engine` + `rl-trainer` per:
+1. Verificare ipotesi utente "cap 18 nel masking".
+2. Inventario API Unciv per scelta tech.
+3. Proporre design RL + reward shaping (utente ha delegato la decisione reward).
+
+### Risultati discovery
+
+**Ipotesi utente "cap 18 nel masking" — FALSA**.
+- Non esiste azione `RESEARCH_<tech>` nell'env (`unciv_env.py:222-273`).
+- Tech tree ruleset Civ V Vanilla = **74 tech** totali.
+- Plateau a ~18 è **naturale**: `ruleset_reader.load_tech_prereqs` filtra solo Ancient+Classical (~21 tech) via `_TARGET_ERAS`, e l'auto-picker alfabetico in `unciv_env.py:452-500` completa ~18 di queste in 155 turni con mono-città.
+
+**Bug latente scoperto** (`state_parser.py:174`): `current_tech` letto da `next(iter(techsInProgress))` ma `techsInProgress` è una `HashMap` Java → ordine non garantito. Fonte autoritativa: `techsToResearch[0]` (`TechManager.kt:129-131`). Fix incluso in File 26.
+
+**API Unciv** (`unciv-engine`):
+- Scelta tech via `civInfo.tech.techsToResearch.add(name)` + `updateResearchProgress()`.
+- Pattern UI usa `getRequiredTechsToDestination` per path automatico dei prereq.
+- Validazione: `canBeResearched(name)` in `TechManager.kt:176-183`.
+
+### Scelte confermate dall'utente
+
+1. **Scope tech: TUTTE le 74** (utente ha confermato la sua intuizione originale, sovrascrivendo la raccomandazione `rl-trainer` di limitarsi a Ancient+Classical). Razionale utente: massima flessibilità anche se in 155 turni l'agente ne vede ~25.
+2. **Reward shaping: invariato** (no `tech_speed_bonus`). `tech_researched: 3.0` sparso + `tech_progress: 0.5` denso (File 23.1) sufficienti. Vittoria scientifica irraggiungibile in 155 turni → no rischio bias.
+3. **Obs: `era_one_hot` +5 dim** → contratto `(61,) → (66,)`. Cambio CLAUDE.md richiesto.
+4. **Fix bug `current_tech` incluso nel File 26**.
+
+### File modificati
+- `md_file_x_claude_code/26_tech_management.md` (creato — 278 righe)
+
+### Design (sintesi)
+- 74 azioni `RESEARCH_<tech>` discrete (ordine alfabetico)
+- Action space: `Discrete(23) → Discrete(97)` (isolato)
+- Masking via prereqs locali Python (no round-trip headless)
+- Nuovo sub-step "research" dopo city steps, prima di unit steps
+- Skip → fallback all'auto-picker esistente (safety net)
+- 3 comandi server Kotlin: `settech`, `listtechs`, `techinfo`
+- `load_all_tech_prereqs` (senza filtro era) + `load_tech_eras`
+- Obs `era_one_hot` per Ancient/Classical/Medieval/Renaissance/Industrial
+- Reward invariato
+
+### Contratti che cambiano
+- Obs vector: `(61,) → (66,)`
+- Action space: `Discrete(23) → Discrete(97)` isolato (cumulato con File 23/24/25 → `Discrete(136+)`)
+- Nuovi comandi headless: `settech`, `listtechs`, `techinfo`
+- **CLAUDE.md tabella contratti** da aggiornare in fase implementazione.
+
+### Test
+N/A — sessione di pianificazione (no codice).
+
+### Note / rischi
+- **Sparsità masking**: 74 azioni con mask attivo per ~5-10 alla volta. Da monitorare `entropy_loss`/`clip_fraction` in TB.
+- **Cumulativo action space**: combinato con File 23/24/25 può superare 130 azioni. Possibile bisogno di policy network più ampia.
+- **Auto-pick fallback** ora pesca da tutte le 74 tech (era 21) — comportamento subottimale by design ma stabile.
+
+### Ordine di implementazione aggiornato
+1. File 23.1 (reward rework)
+2. File 23 (Worker completo, Opzione B)
+3. File 24 (buildroad)
+4. File 25 (popolazione città)
+5. **File 26 (tech management)**
+
+### TODO prossima sessione
+1. Implementare File 23.1 via `/team implement` (prossimo in coda).
+2. File 26 può essere implementato anche prima di File 23/24/25 (è indipendente dagli altri — vedi sezione Prerequisito della spec).
+
+---
+
 ## [2026-05-31] — Sessione 43 — Validazione Run #22 + Pianificazione File 23.1 (reward rework)
 
 ### Obiettivo sessione
