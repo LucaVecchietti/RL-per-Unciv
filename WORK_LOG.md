@@ -5,6 +5,77 @@
 
 ---
 
+## [2026-05-31] — Sessione 43 — Validazione Run #22 + Pianificazione File 23.1 (reward rework)
+
+### Obiettivo sessione
+1. Validare il Run #22 (500k step, ~2h45) come prerequisito per File 23.
+2. Pianificare File 23.1 (reward rework) prima di implementare File 23, per correggere `cities_founded` calante osservato nel Run #22.
+
+### Validazione Run #22
+- 500k step completati, **nessun crash**.
+- `eval/mean_reward`: 166.14 (50k) → 175.73 (500k), peak **176.00 a 450k**. Trend monotonamente crescente, +10 punti in 10 eval.
+- `improvements_built_mean`: 0 (Run #20) → 5-15 stabile.
+- `connected_resources_mean`: 0-1 sporadico (era 0 stabile).
+- `fps`: 50 stabile (era 18-39 in Run #20).
+- `units_stuck_mean`: oscilla 4-100 (era esploso a 275 in Run #20).
+- `gold_mean`: passa da -210 a +400/+700 (cash flow risolto).
+- `action_Worker`: 0.014 → 0.04 (3×), `moved_worker_mean`: 94 → 950 (10×).
+- `action_Idle`: 0.22 → 0.11 (agente più attivo).
+
+**Anomalie osservate** (non bloccanti, ma motivano File 23.1):
+1. **`cities_founded_mean` cala** 2 → 0-1; `action_FoundCity` 0.05 → 0.002. L'agente DE-impara a fondare città — diagnosi: `found_city: 5.0` è one-shot, no gradiente per espansione continua.
+2. **`techs_mean = 18` costante** — l'agente non sceglie tech attivamente, nessun reward su accumulo.
+3. **`connected_resources_mean` resta basso** (~0-1) — Worker fa improve di vario tipo, raramente connettenti.
+
+Prerequisito File 23 dichiarato in `23_worker_full_improvements.md` SODDISFATTO.
+
+### File modificati
+- `md_file_x_claude_code/23.1_reward_rework.md` (creato — 252 righe)
+
+### Metodo (skill `/team plan`)
+Discovery focalizzata su `rl-trainer` (le direttive utente sono già concrete; engine, tests, docs non coinvolti in design). `rl-trainer` ha analizzato `reward.py`, metriche Run #22, e prodotto un piano in 7 sezioni (A-G). Sintesi presentata all'utente con 3 scelte chiave via AskUserQuestion. Tutte le opzioni "Recommended" confermate.
+
+### Scelte confermate (File 23.1)
+
+**A. Direttive utente (literal)**:
+- `resource_connected` differenziato per tipo: Bonus +3, Strategic +4, Luxury +5.
+- 5 stats accumulate uniformi: `science/gold/culture/happiness/faith_accumulated = 0.25 × max(0, delta)` turn-per-turn.
+- Delta clippato a 0 sui cali (non penalizziamo fluttuazioni transitorie).
+- `faith_accumulated` armato ma inerte (faith_per_turn non ancora nel parser).
+
+**B. Diagnosi cities_founded calante**:
+- `found_city: 5.0 → 3.0` (riduzione varianza one-shot).
+- `cities_alive_bonus: 0.05` per turno per città oltre la prima (continuum, gradiente denso).
+
+**C. Proposte aggiuntive rl-trainer**:
+- `tech_progress: 0.5` su delta normalizzato `progress/cost` (sblocca techs_mean=18).
+- `units_stuck_penalty: 0.02` per unità stuck.
+- `happiness_bonus: 0.05` se `happiness > 5` (cap, comportamento meno risk-averse).
+- `building_diversity: 0.5` una tantum per ogni edificio nuovo nel set globale.
+
+**Feature flag**: tutti i pesi vanno in `config/default_config.yaml`, ablation via `peso = 0.0` senza PR multiple.
+
+### Ordine di implementazione aggiornato
+1. **File 23.1** (reward rework) — prossimo
+2. File 23 (Worker completo, Opzione B)
+3. File 24 (buildroad)
+4. File 25 (popolazione città)
+
+### Test
+N/A — sessione di pianificazione (no codice).
+
+### Note / contratti
+- **Contratti CLAUDE.md invariati**: obs `(61,)`, action `Discrete(23)`. File 23.1 tocca solo logica reward + GameState fields (non obs).
+- Nessun rebuild JAR (modifiche solo Python).
+- Criteri di accettazione 50k step: `ep_rew_mean ∈ [180, 250]`, `connected_resources_mean ≥ 1.5`, `techs_mean ≥ 20`, `cities_founded_mean ≥ 1.5`, `action_FoundCity ≥ 0.005`.
+
+### TODO prossima sessione
+1. Implementare File 23.1 via `/team implement` (engine non coinvolto, principalmente rl-trainer + tests-engineer).
+2. Run di validazione 50k step dopo implementazione per verificare criteri di accettazione.
+3. Se ok → procedere con File 23 (Worker completo).
+
+---
+
 ## [2026-05-30] — Sessione 42 — Pianificazione File 24 + File 25
 
 ### Obiettivo sessione
