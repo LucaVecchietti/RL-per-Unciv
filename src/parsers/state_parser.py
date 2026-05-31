@@ -87,6 +87,8 @@ class CityState:
     # File 22 (C2) — risorse nel territorio
     territory_strategic: int = 0
     territory_luxury: int = 0
+    # File 23.1 — risorse Bonus nel territorio (parallelo a strategic/luxury)
+    territory_bonus: int = 0
 
 
 @dataclass
@@ -125,8 +127,15 @@ class GameState:
     # File 22 (C3) — risorse connesse (nel territorio + miglioramento giusto costruito)
     connected_strategic: int = 0
     connected_luxury: int = 0
+    # File 23.1 — risorse Bonus connesse (parallelo a strategic/luxury)
+    connected_bonus: int = 0
     # File 22 (C3) — posizioni delle risorse già connesse (per maschera Improve mirata)
     resource_connected_tiles: set = field(default_factory=set)
+    # File 23.1 — fede per turno (default 0; campo non direttamente nel save, eventualmente
+    # calcolato a runtime come delta di religionManager.storedFaith analogamente a culture_per_turn).
+    # TODO: parsing faith — il save espone solo civ.religionManager.storedFaith,
+    # non c'è un faithPerTurn diretto: serve un meccanismo delta lato UncivEnv come per stored_culture.
+    faith_per_turn: float = 0.0
 
 
 class UncivStateParser:
@@ -223,7 +232,9 @@ class UncivStateParser:
         )
         units = self._parse_units(tile_list)
 
-        # File 22 (C2/C3) — posizioni risorse Strategic/Luxury (tipo dal ruleset) e quali sono connesse
+        # File 22 (C2/C3) — posizioni risorse Strategic/Luxury/Bonus (tipo dal ruleset)
+        # e quali sono connesse (File 23.1 estende anche alle Bonus, che hanno tutte un improvement
+        # connettore tipo Pasture/Camp/Farm/Quarry/Fishing Boats/Plantation).
         resource_tiles: dict[tuple[int, int], str] = {}
         resource_connected: set[tuple[int, int]] = set()
         for t in tile_list:
@@ -231,7 +242,7 @@ class UncivStateParser:
             if not res:
                 continue
             rtype = self.resource_types.get(res, '')
-            if rtype not in ('Strategic', 'Luxury'):
+            if rtype not in ('Strategic', 'Luxury', 'Bonus'):
                 continue
             pos = t.get('position', {})
             key = (int(pos.get('x', 0)), int(pos.get('y', 0)))
@@ -241,9 +252,9 @@ class UncivStateParser:
                 resource_connected.add(key)
 
         # Conteggio risorse nel territorio di ogni città (totali e connesse)
-        connected_strategic = connected_luxury = 0
+        connected_strategic = connected_luxury = connected_bonus = 0
         for cr, cs in zip(civ.get('cities', []), cities):
-            strat = lux = 0
+            strat = lux = bonus_cnt = 0
             for tp in cr.get('tiles', []):
                 if not isinstance(tp, dict):
                     continue
@@ -257,8 +268,13 @@ class UncivStateParser:
                     lux += 1
                     if key in resource_connected:
                         connected_luxury += 1
+                elif rt == 'Bonus':
+                    bonus_cnt += 1
+                    if key in resource_connected:
+                        connected_bonus += 1
             cs.territory_strategic = strat
             cs.territory_luxury = lux
+            cs.territory_bonus = bonus_cnt
 
         # Diplomazia — at war se diplomaticStatus == 'War'
         diplomacy: dict = civ.get('diplomacy', {})
@@ -297,7 +313,12 @@ class UncivStateParser:
             resource_tiles=resource_tiles,
             connected_strategic=connected_strategic,
             connected_luxury=connected_luxury,
+            connected_bonus=connected_bonus,
             resource_connected_tiles=resource_connected,
+            # File 23.1 — faith/turno non disponibile direttamente nel save: lasciato default 0.
+            # TODO: parsing faith — religionManager.storedFaith è leggibile; per ottenere il delta
+            # va memorizzato lo stato precedente in UncivEnv (come si fa già per stored_culture).
+            faith_per_turn=0.0,
         )
 
     def _find_player_civ(self, raw: dict) -> dict:

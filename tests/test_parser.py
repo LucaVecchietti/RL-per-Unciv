@@ -277,3 +277,75 @@ def test_connected_resources_counted():
     assert state.cities[0].territory_strategic == 2
     assert state.connected_strategic == 1
     assert state.connected_luxury == 0
+
+
+# --- File 23.1 — risorse Bonus e faith ---------------------------------------
+
+def _save_with(parser: UncivStateParser, raw: dict):
+    """Scrive raw su tempfile e ritorna il GameState parsato col parser dato."""
+    import tempfile as _t
+    with _t.NamedTemporaryFile(suffix=".json", mode='w', delete=False) as f:
+        json.dump(raw, f)
+        path = f.name
+    return parser.parse(path)
+
+
+def test_connected_bonus_count():
+    """Save con tile-Bonus migliorato dal Worker → connected_bonus == 1."""
+    civ_extra = {"cities": [{
+        "name": "Delhi", "population": {"population": 1}, "cityConstructions": {},
+        "tiles": [{"x": 3, "y": 3}], "location": {"x": 0, "y": 0},
+    }]}
+    tiles = [
+        {"position": {"x": 3, "y": 3}, "resource": "Banana", "improvement": "Plantation"},
+    ]
+    raw = _civ_save(civ_extra, tile_list=tiles)
+    parser = UncivStateParser(
+        player_civ="India",
+        resource_types={"Banana": "Bonus"},
+        resource_improvements={"Banana": "Plantation"},
+    )
+    state = _save_with(parser, raw)
+    assert state.connected_bonus == 1
+
+
+def test_resource_tiles_includes_bonus():
+    """tile-Bonus deve apparire in state.resource_tiles col tipo 'Bonus'."""
+    tiles = [
+        {"position": {"x": 4, "y": 2}, "resource": "Wheat"},
+    ]
+    raw = _civ_save(tile_list=tiles)
+    parser = UncivStateParser(
+        player_civ="India",
+        resource_types={"Wheat": "Bonus"},
+    )
+    state = _save_with(parser, raw)
+    assert (4, 2) in state.resource_tiles
+    assert state.resource_tiles[(4, 2)] == "Bonus"
+
+
+def test_faith_per_turn_default_zero():
+    """Save senza info di fede → faith_per_turn == 0.0."""
+    state = _parse_save(_civ_save())
+    assert state.faith_per_turn == 0.0
+
+
+def test_city_state_territory_bonus_count():
+    """Città con N tile-Bonus nel proprio territorio → territory_bonus == N."""
+    civ_extra = {"cities": [{
+        "name": "Delhi", "population": {"population": 1}, "cityConstructions": {},
+        "tiles": [{"x": 1, "y": 1}, {"x": 2, "y": 2}, {"x": 3, "y": 3}],
+        "location": {"x": 0, "y": 0},
+    }]}
+    tiles = [
+        {"position": {"x": 1, "y": 1}, "resource": "Banana"},
+        {"position": {"x": 2, "y": 2}, "resource": "Wheat"},
+        {"position": {"x": 3, "y": 3}, "resource": "Stone"},
+    ]
+    raw = _civ_save(civ_extra, tile_list=tiles)
+    parser = UncivStateParser(
+        player_civ="India",
+        resource_types={"Banana": "Bonus", "Wheat": "Bonus", "Stone": "Bonus"},
+    )
+    state = _save_with(parser, raw)
+    assert state.cities[0].territory_bonus == 3

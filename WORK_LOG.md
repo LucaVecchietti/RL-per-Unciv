@@ -5,6 +5,54 @@
 
 ---
 
+## [2026-05-31] — Sessione 45 — Implementazione File 23.1 (reward rework)
+
+### Obiettivo sessione
+Implementare File 23.1 (spec in `md_file_x_claude_code/23.1_reward_rework.md`) via `/team implement`: reward rework con risorse tipizzate, stats accumulate, cities_alive_bonus, riduzione found_city, tech_progress, units_stuck_penalty, happiness_bonus, building_diversity.
+
+### Metodo (skill `/team implement`)
+Tre agenti in parallelo:
+- `unciv-engine`: nuovi campi parser (connected_bonus, faith_per_turn, territory_bonus, filtro Bonus in resource_tiles)
+- `rl-trainer`: reward.py + config + callbacks + units_stuck in env
+- `tests-engineer`: 29 nuovi test (reward 24, parser 4, env 1)
+
+### File modificati
+- `src/parsers/state_parser.py` (modificato — `GameState.connected_bonus`, `faith_per_turn`, `CityState.territory_bonus`; filtro 'Bonus' in resource_tiles; conteggio connected_bonus parallelo a strategic/luxury)
+- `src/utils/reward.py` (modificato — `REWARD_WEIGHTS` rifatto, 11 nuovi blocchi `compute_reward`: risorse tipizzate, 5 stats accumulate, cities_alive, tech_progress, units_stuck, happiness_bonus, building_diversity; `found_city: 5.0 → 3.0`)
+- `config/default_config.yaml` (modificato — sezione `reward:` mirror 1:1 di REWARD_WEIGHTS)
+- `src/utils/callbacks.py` (modificato — split `connected_*_mean` in 3 metriche tipizzate + 2 nuove diagnostiche `tech_progress_mean`, `cities_alive_bonus_total_mean`)
+- `src/envs/unciv_env.py` (modificato — `curr.units_stuck` esposto come delta per-turno da `_ep_units_stuck` prima di `compute_reward`)
+- `tests/test_reward.py` (modificato — 24 nuovi test File 23.1 + 1 legacy aggiornato per usare `resource_connected_strategic`)
+- `tests/test_parser.py` (modificato — 4 nuovi test: connected_bonus, resource_tiles include Bonus, faith default, territory_bonus)
+- `tests/test_env.py` (modificato — 1 nuovo test units_stuck nel info dict)
+
+### Note implementative
+- **Building diversity**: implementato in `reward.py` via diff `curr_buildings_set - prev_buildings_set` calcolato al volo. Nessun TODO saltato.
+- **Units stuck**: esposto come campo runtime su `curr` (NON aggiunto a GameState per non spostare scope), letto da reward.py via `getattr(curr, 'units_stuck', 0)`. Cost zero (riusa count esistente).
+- **Faith parsing**: identificato `civ.religionManager.storedFaith` nel save (4-8 nei save di test), MA non c'è `faithPerTurn` diretto. Lasciato `faith_per_turn = 0.0` con TODO: richiederebbe meccanismo delta come `stored_culture → culture_per_turn`, fuori scope.
+- **Backward compat metrica TB**: `unciv/connected_resources_mean` mantenuto come somma per non rompere grafici esistenti.
+- **Test legacy aggiornato**: `test_resource_connected_bonus` ora usa chiave `resource_connected_strategic` (cambio contratto intenzionale di File 23.1).
+
+### Test
+- [x] 162/162 verdi: `.venv\Scripts\python -m pytest tests/ -q` (133 + 29 nuovi)
+- Suite verificata inline dalla sessione principale (non solo tests-engineer).
+
+### Contratti
+- **CLAUDE.md INVARIATO**: obs `(61,)`, action `Discrete(23)`. La modifica al parser aggiunge campi runtime usati solo da reward.py — `to_observation_vector` non tocca obs shape.
+- Nessun rebuild JAR (modifiche solo Python).
+
+### TODO prossima sessione
+1. **Rilanciare il training** per validare il reward rework. Criteri attesi a 50k step:
+   - `ep_rew_mean ∈ [180, 250]` (no esplosione)
+   - `connected_resources_mean ≥ 1.5` (era 0-1 in Run #22)
+   - `techs_mean ≥ 20` (era 18, ora con tech_progress 0.5 denso)
+   - `cities_founded_mean ≥ 1.5` (inverte trend calante)
+   - `action_FoundCity ≥ 0.005` (era 0.002)
+2. Se ok → procedere con **File 23** (Worker completo, Opzione B).
+3. **Faith parsing** rimasto TODO: implementare delta `stored_faith` come per culture quando si tornerà sul tema (Fase 4 o subito se serve).
+
+---
+
 ## [2026-05-31] — Sessione 44 — Pianificazione File 26 (tech management)
 
 ### Obiettivo sessione

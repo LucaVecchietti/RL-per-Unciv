@@ -86,9 +86,16 @@ class UncivMetricsCallback(BaseCallback):
         self.logger.record("unciv/cities_founded_mean", np.mean([i.get("cities_founded", 0) for i in infos]))
         # File 22 (C2) — risorse nel territorio
         self.logger.record("unciv/territory_resources_mean", np.mean([i.get("territory_resources", 0) for i in infos]))
-        # File 22 (C3) — risorse connesse e miglioramenti
+        # File 22 (C3) / File 23.1 — risorse connesse: somma (backward compat) + split tipizzato
         self.logger.record("unciv/connected_resources_mean", np.mean([i.get("connected_resources", 0) for i in infos]))
+        self.logger.record("unciv/connected_bonus_mean",     np.mean([i.get("connected_bonus", 0)     for i in infos]))
+        self.logger.record("unciv/connected_strategic_mean", np.mean([i.get("connected_strategic", 0) for i in infos]))
+        self.logger.record("unciv/connected_luxury_mean",    np.mean([i.get("connected_luxury", 0)    for i in infos]))
         self.logger.record("unciv/improvements_built_mean", np.mean([i.get("improvements_built", 0) for i in infos]))
+
+        # File 23.1 — diagnostica shaping aggiuntivo
+        self.logger.record("unciv/tech_progress_mean",              np.mean([i.get("tech_progress_ratio", 0)       for i in infos]))
+        self.logger.record("unciv/cities_alive_bonus_total_mean",   np.mean([i.get("cities_alive_bonus_total", 0)  for i in infos]))
 
         self._episode_infos.clear()
 

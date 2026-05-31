@@ -133,6 +133,13 @@ class UncivEnv(gym.Env):
         self._ep_cities_founded: int = 0
         self._ep_improvements_built: int = 0
 
+        # File 23.1 — snapshot cumulativo `units_stuck` al turno precedente,
+        # per esporre il delta per-turno via `curr.units_stuck` (consumato da reward.py).
+        self._units_stuck_last_turn: int = 0
+        # File 23.1 — accumulatori diagnostica reward (logged via info → callbacks TB).
+        self._ep_tech_progress_ratio: float = 0.0
+        self._ep_cities_alive_bonus_total: float = 0.0
+
     # ------------------------------------------------------------------
     # Metodi obbligatori Gymnasium
     # ------------------------------------------------------------------
@@ -163,6 +170,9 @@ class UncivEnv(gym.Env):
         self._ep_new_tiles = 0
         self._ep_cities_founded = 0
         self._ep_improvements_built = 0
+        self._units_stuck_last_turn = 0
+        self._ep_tech_progress_ratio = 0.0
+        self._ep_cities_alive_bonus_total = 0.0
         self._start_new_game()
         self._current_state = self.parser.parse(self.save_path)
         self._pending_cities = list(self._current_state.cities)
@@ -366,6 +376,18 @@ class UncivEnv(gym.Env):
         # Cultura/turno = delta di stored_culture (il parser non ha lo stato precedente)
         if prev is not None:
             curr.culture_per_turn = max(0.0, curr.stored_culture - prev.stored_culture)
+        # File 23.1 — units_stuck del turno corrente = delta del cumulativo per-episodio.
+        # Consumato da reward.compute_reward via `getattr(curr, 'units_stuck', 0)`.
+        curr.units_stuck = max(0, self._ep_units_stuck - self._units_stuck_last_turn)
+        self._units_stuck_last_turn = self._ep_units_stuck
+        # File 23.1 — diagnostica shaping per TB (accumulati per episodio)
+        if prev is not None:
+            prev_cost = max(getattr(prev, "current_tech_cost", 1.0), 1.0)
+            curr_cost = max(getattr(curr, "current_tech_cost", 1.0), 1.0)
+            prev_ratio = max(0.0, min(1.0, getattr(prev, "current_tech_progress", 0.0) / prev_cost))
+            curr_ratio = max(0.0, min(1.0, getattr(curr, "current_tech_progress", 0.0) / curr_cost))
+            self._ep_tech_progress_ratio += max(0.0, curr_ratio - prev_ratio)
+        self._ep_cities_alive_bonus_total += max(0, len(curr.cities) - 1)
         self._accumulate_episode_metrics(prev, curr)
         # nuovo turno → fase città (rotation per-città su tutte le città)
         self._step_type = "city"
@@ -409,9 +431,20 @@ class UncivEnv(gym.Env):
             "cities_founded": self._ep_cities_founded,
             # File 22 (C2) — risorse nel territorio (Strategic + Luxury, tutte le città)
             "territory_resources": sum(c.territory_strategic + c.territory_luxury for c in curr.cities),
-            # File 22 (C3) — miglioramenti e risorse connesse
+            # File 22 (C3) — miglioramenti e risorse connesse (somma per backward compat)
             "improvements_built": self._ep_improvements_built,
-            "connected_resources": curr.connected_strategic + curr.connected_luxury,
+            "connected_resources": (
+                getattr(curr, "connected_bonus", 0)
+                + curr.connected_strategic
+                + curr.connected_luxury
+            ),
+            # File 23.1 — split risorse connesse tipizzato (per TB)
+            "connected_bonus":     getattr(curr, "connected_bonus", 0),
+            "connected_strategic": curr.connected_strategic,
+            "connected_luxury":    curr.connected_luxury,
+            # File 23.1 — diagnostica shaping reward
+            "tech_progress_ratio":      self._ep_tech_progress_ratio,
+            "cities_alive_bonus_total": self._ep_cities_alive_bonus_total,
         }
         return obs, reward, terminated, truncated, info
 

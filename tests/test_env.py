@@ -462,6 +462,26 @@ def test_apply_improve_increments_counter(env):
 
 # --- File 20 — fix costruzione ---
 
+# --- File 23.1 — units_stuck esposto per il reward shaping --------------------
+
+def test_units_stuck_in_info_dict(env):
+    """Dopo un game turn, info["units_stuck"] riflette il contatore _ep_units_stuck.
+
+    File 23.1 introduce units_stuck_penalty (peso 0.02): la penalty richiede che il
+    numero di unità stuck sia esposto. Attualmente l'env lo passa via info dict; il
+    reward può consumarlo da lì o, in alternativa, da curr.units_stuck.
+    """
+    curr = _mock_state()
+    env._current_state = curr
+    env._ep_units_stuck = 7
+    with patch.object(env, '_advance_turn'), \
+         patch.object(env, '_advance_tech'), \
+         patch.object(env.parser, 'parse', return_value=curr):
+        obs, reward, term, trunc, info = env._advance_game_turn()
+    assert "units_stuck" in info
+    assert info["units_stuck"] == 7
+
+
 def test_apply_action_sets_construction_queue(env, tmp_path):
     """_apply_action scrive constructionQueue[0], non il campo inesistente currentConstruction."""
     import json as _json

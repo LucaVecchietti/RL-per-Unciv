@@ -27,7 +27,30 @@ unciv:
   saves_prefix: "current_game"    # prefisso save files paralleli
 
 reward:
-  exploration: 0.3                # reward per nuova tile esplorata
-  found_city: 5.0                 # bonus per ogni nuova città fondata (Fase C1)
-  resource_placement: 2.0         # bonus per tile-risorsa catturata nel territorio (Fase C2)
-  resource_connected: 3.0         # bonus per risorsa connessa (miglioramento costruito) (Fase C3)
+  # --- Legacy (invariati) ---
+  exploration: 0.3                 # reward per nuova tile esplorata
+  resource_placement: 2.0          # bonus per tile-risorsa catturata nel territorio (Fase C2)
+
+  # --- Modificati in File 23.1 ---
+  found_city: 3.0                  # ridotto da 5.0; bilanciato da cities_alive_bonus continuo
+
+  # --- File 23.1 — risorse connesse tipizzate (ex resource_connected: 3.0) ---
+  resource_connected_bonus:     3.0   # Banana, Wheat, Stone, Cattle…
+  resource_connected_strategic: 4.0   # Iron, Horses, Coal, Oil…
+  resource_connected_luxury:    5.0   # Gems, Silk, Spices, Gold (luxury)…
+
+  # --- File 23.1 — espansione continua ---
+  cities_alive_bonus: 0.05         # per turno, per ogni città oltre la prima
+
+  # --- File 23.1 — stats accumulate (delta clip ≥ 0) ---
+  science_accumulated:   0.25
+  gold_accumulated:      0.25
+  culture_accumulated:   0.25
+  happiness_accumulated: 0.25
+  faith_accumulated:     0.25      # inerte finché faith_per_turn=0 nel parser
+
+  # --- File 23.1 — shaping aggiuntivi ---
+  tech_progress:        0.5        # delta normalizzato (progress/cost), clip [0,1]
+  units_stuck_penalty:  0.02       # per unità stuck nel turno corrente
+  happiness_bonus:      0.05       # cap implicito = peso, attivo se happiness > 5
+  building_diversity:   0.5        # una tantum per building nuovo nel set civ
