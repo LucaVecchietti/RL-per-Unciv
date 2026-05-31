@@ -18,8 +18,8 @@ REWARD_WEIGHTS = {
     "exploration":        0.3,
     "resource_placement": 2.0,
 
-    # --- Modificati in File 23.1 ---
-    "found_city": 3.0,  # ridotto da 5.0 → bilanciato da cities_alive_bonus continuo
+    # --- Modificati in File 23.1 / Sessione 45.1 ---
+    "found_city": 6.0,  # 23.1 lo aveva ridotto a 3.0; 45.1 lo riporta a 6.0 per rompere lo stallo cities_founded (diagnosi rl-trainer Run #23)
 
     # --- Nuovi in File 23.1: risorse connesse tipizzate (ex resource_connected) ---
     "resource_connected_bonus":     3.0,
@@ -27,7 +27,7 @@ REWARD_WEIGHTS = {
     "resource_connected_luxury":    5.0,
 
     # --- Nuovi in File 23.1: espansione continua ---
-    "cities_alive_bonus": 0.05,  # per ogni città oltre la prima, per turno
+    "cities_alive_bonus": 0.15,  # per ogni città oltre la prima, per turno (45.1: 0.05→0.15 per pareggiare farming mono-città)
 
     # --- Nuovi in File 23.1: stats accumulate (delta clip ≥ 0) ---
     "science_accumulated":   0.25,
@@ -40,7 +40,7 @@ REWARD_WEIGHTS = {
     "tech_progress":        0.5,   # delta normalizzato (progress/cost), clip [0,1]
     "units_stuck_penalty":  0.02,  # per unità stuck nel turno
     "happiness_bonus":      0.05,  # cap implicito = peso (one-shot per turno)
-    "building_diversity":   0.5,   # una tantum per ogni building nuovo nel set civ
+    "building_diversity":   0.2,   # una tantum per ogni building nuovo nel set civ (45.1: 0.5→0.2 per ridurre farming bias mono-città)
 }
 
 

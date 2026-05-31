@@ -159,8 +159,10 @@ def test_return_type_float():
 #   resource_connected_luxury=5.0, science_accumulated=0.25,
 #   gold_accumulated=0.25, culture_accumulated=0.25,
 #   happiness_accumulated=0.25, faith_accumulated=0.25,
-#   cities_alive_bonus=0.05, found_city=3.0 (ridotto), tech_progress=0.5,
-#   units_stuck_penalty=0.02, happiness_bonus=0.05, building_diversity=0.5.
+#   cities_alive_bonus=0.15 (Sessione 45.1: 0.05→0.15), found_city=6.0
+#   (Sessione 45.1: 3.0→6.0 per rompere stallo cities_founded),
+#   tech_progress=0.5, units_stuck_penalty=0.02, happiness_bonus=0.05,
+#   building_diversity=0.2 (Sessione 45.1: 0.5→0.2).
 #
 # E i nuovi campi su GameState/CityState:
 #   GameState.connected_bonus, GameState.faith_per_turn, GameState.units_stuck,
@@ -361,13 +363,14 @@ def test_cities_alive_bonus_three_cities() -> None:
 # --- Found city ridotto -------------------------------------------------------
 
 def test_found_city_reduced_to_3() -> None:
-    """Fondazione nuova città → +3.0 (ex 5.0).
+    """Fondazione nuova città → REWARD_WEIGHTS["found_city"] + cities_alive_bonus.
 
-    Manteniamo la popolazione totale invariata (Rome scende a 2, Delhi nasce a 1)
-    per isolare il contributo di found_city + cities_alive_bonus dal population_growth.
+    Sessione 45.1: il peso è tornato a 6.0 (era 3.0 in File 23.1, era 5.0 prima).
+    Il test resta valido perché compara il delta col valore corrente del peso —
+    il nome legacy `_reduced_to_3` non riflette più il valore ma il test isola
+    correttamente found_city + cities_alive_bonus (1 città oltre la prima) dal
+    population_growth (popolazione totale invariata).
     """
-    assert REWARD_WEIGHTS["found_city"] == pytest.approx(3.0, abs=1e-6), \
-        "found_city deve essere ridotto a 3.0 in File 23.1"
     prev = _gs(cities=[CityState("Rome", 3, "Monument", [], 200, 0)])
     curr = _gs(cities=[
         CityState("Rome", 2, "Monument", [], 200, 0),

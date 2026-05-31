@@ -5,6 +5,40 @@
 
 ---
 
+## [2026-05-31] — Sessione 45.1 — Tuning reward post Run #23 (stallo cities_founded)
+
+### Obiettivo sessione
+Diagnosticare con `rl-trainer` perché File 23.1 (Sessione 45) non sta invertendo il trend `cities_founded_mean` (osservato oscillante 0-1.67 in Run #23, ~33k step, 8 iter), e applicare modifiche solo-pesi senza attendere altri step.
+
+### Diagnosi `rl-trainer` (verbatim)
+- Reward "espansione 3 città" in 150 turni: ~17 (`cities_alive_bonus_total ≈ 11` + `found_city × 2 = 6`)
+- Reward "farming mono-città" in 150 turni: **~55-75** (improvements +30-50, tech_progress 6.85, building_complete 7.5, population 8, building_diversity 2.5)
+- Costo opportunità Settler: 106 prod produce ~10 reward vs ~10-15 di Worker+Library alternativi
+- Verdetto: reward landscape sbilanciato **3-4×** a favore mono-città. **Problema strutturale**, non statistico. Aspettare 100k step non sposta l'equilibrio matematico.
+
+### Modifiche applicate (B.1 + B.2 + B.3 raccomandate)
+- `cities_alive_bonus: 0.05 → 0.15` (triplica → 3 città-ep da 11 a 33 reward extra)
+- `found_city: 3.0 → 6.0` (ripristina one-shot forte per primo Settler, anti-stagnazione)
+- `building_diversity: 0.5 → 0.2` (riduce farming bias mantenendo incentivo varietà)
+
+### File modificati
+- `src/utils/reward.py` (3 pesi)
+- `config/default_config.yaml` (mirror)
+- `tests/test_reward.py` (commento storico aggiornato + docstring `test_found_city_reduced_to_3` aggiornata; nessun asserto numerico hardcoded, i test usano `REWARD_WEIGHTS[...]` direttamente quindi continuano a funzionare)
+
+### Test
+- [x] 162/162 verdi (1 fallimento iniziale `test_found_city_reduced_to_3` per asserto hardcoded a 3.0, fixato)
+
+### TODO prossima sessione
+1. **Rilanciare il training** per validare il nuovo bilanciamento. Criteri attesi a 50k step:
+   - `cities_founded_mean ≥ 1.8` (vs 0-1.67 di Run #23)
+   - `cities_alive_bonus_total_mean ≥ 80` (vs ~50 di Run #23)
+   - `action_FoundCity ≥ 0.02` stabile (vs 0.01-0.02 oscillante di Run #23)
+   - `ep_rew_mean ∈ [195, 230]` (atteso +15-25 dai 181 di Run #23 per via dei nuovi pesi)
+2. Se ancora insufficiente, valutare modifiche obs/action (fuori scope reward tuning).
+
+---
+
 ## [2026-05-31] — Sessione 45 — Implementazione File 23.1 (reward rework)
 
 ### Obiettivo sessione
