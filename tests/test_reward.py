@@ -502,6 +502,57 @@ def test_building_diversity_second_time() -> None:
 
 # --- Regression ----------------------------------------------------------------
 
+# --- File 24 — city_connected_to_capital + road_built ------------------------
+
+
+def _gs_with_roads(
+    cities_connected_to_capital: int = 0,
+    tiles_with_road: set | None = None,
+) -> GameState:
+    """Costruisce un GameState minimale per i test File 24 (campi nuovi post-construct)."""
+    state = GameState(
+        turn=10, current_player="India", gold=200, happiness=5,
+        cities=[CityState("Rome", 3, "Monument", [], 200, 0)],
+        techs_researched=["Agriculture"], current_tech="Writing",
+        map_width=20, map_height=20,
+    )
+    state.cities_connected_to_capital = cities_connected_to_capital
+    state.tiles_with_road = tiles_with_road if tiles_with_road is not None else set()
+    return state
+
+
+def test_city_connected_delta_positive() -> None:
+    """Una città in più connessa alla capitale → reward include +city_connected_to_capital (4.0)."""
+    prev = _gs_with_roads(cities_connected_to_capital=0)
+    curr = _gs_with_roads(cities_connected_to_capital=1)
+    reward = compute_reward(prev, curr, action=0)
+    assert reward >= REWARD_WEIGHTS["city_connected_to_capital"] - 1e-6
+
+
+def test_city_connected_no_delta() -> None:
+    """Stesso numero di città connesse → contributo 0 da city_connected_to_capital."""
+    prev = _gs_with_roads(cities_connected_to_capital=2)
+    curr = _gs_with_roads(cities_connected_to_capital=2)
+    reward = compute_reward(prev, curr, action=0)
+    assert reward == pytest.approx(0.0, abs=1e-6)
+
+
+def test_road_built_positive_delta() -> None:
+    """Una road nuova costruita → reward include +road_built (0.3)."""
+    prev = _gs_with_roads(tiles_with_road=set())
+    curr = _gs_with_roads(tiles_with_road={(0, 0)})
+    reward = compute_reward(prev, curr, action=0)
+    assert reward >= REWARD_WEIGHTS["road_built"] - 1e-6
+
+
+def test_road_built_no_delta() -> None:
+    """tiles_with_road invariati → contributo 0 da road_built."""
+    prev = _gs_with_roads(tiles_with_road={(1, 1), (2, 2)})
+    curr = _gs_with_roads(tiles_with_road={(1, 1), (2, 2)})
+    reward = compute_reward(prev, curr, action=0)
+    assert reward == pytest.approx(0.0, abs=1e-6)
+
+
 def test_regression_episode_bound() -> None:
     """150 turni con valori 'tipici' → total_reward < 500 (no esplosione)."""
     total = 0.0

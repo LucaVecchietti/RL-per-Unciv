@@ -97,17 +97,23 @@ class UncivMetricsCallback(BaseCallback):
         self.logger.record("unciv/tech_progress_mean",              np.mean([i.get("tech_progress_ratio", 0)       for i in infos]))
         self.logger.record("unciv/cities_alive_bonus_total_mean",   np.mean([i.get("cities_alive_bonus_total", 0)  for i in infos]))
 
+        # File 24 — road / trade-network metrics
+        self.logger.record("unciv/roads_built_mean",              np.mean([i.get("roads_built", 0)                 for i in infos]))
+        self.logger.record("unciv/cities_connected_mean",         np.mean([i.get("cities_connected_to_capital", 0) for i in infos]))
+        self.logger.record("unciv/road_actions_attempted_mean",   np.mean([i.get("road_actions_attempted", 0)      for i in infos]))
+        self.logger.record("unciv/road_actions_succeeded_mean",   np.mean([i.get("road_actions_succeeded", 0)      for i in infos]))
+
         self._episode_infos.clear()
 
 
-# Fase 2.C — 23 azioni: 9 edifici + 5 unità + skip + 6 direzioni hex + FoundCity + Improve
+# File 24 — 24 azioni: 9 edifici + 5 unità + skip + 6 direzioni hex + FoundCity + Improve + BUILD_ROAD
 _ACTION_NAMES = [
     "Barracks", "Colosseum", "Courthouse", "Granary", "Library",
     "Monument", "Stable", "Temple", "Walls",
     "Scout", "Settler", "Spearman", "Warrior", "Worker",
     "Idle",
     "MOVE_2", "MOVE_4", "MOVE_6", "MOVE_8", "MOVE_10", "MOVE_12",
-    "FoundCity", "Improve",
+    "FoundCity", "Improve", "BUILD_ROAD",
 ]
 
 

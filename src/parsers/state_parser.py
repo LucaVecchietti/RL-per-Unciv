@@ -148,6 +148,17 @@ class GameState:
     # nemici) tutte le città sono auto-fondate quindi nessuna è annessa → set() è corretto.
     # Da rivedere quando entrerà il combattimento (Fase 3).
     annexed_cities: set = field(default_factory=set)
+    # File 24 — posizioni (x,y) dei tile con strada (Road/Railroad).
+    # Sorgente: `Tile.roadStatus` (campo serializzato, default "None" → assente nel save).
+    # Usato per: maschera Improve/BuildRoad mirata, feature obs `selected_unit_on_road`.
+    tiles_with_road: set = field(default_factory=set)
+    # File 24 — numero di città NON-capitale del player connesse alla capitale via trade network.
+    # Sorgente: `City.connectedToCapitalStatus` (proxy serializzabile, vedi City.kt:158).
+    # NOTA: il flag è aggiornato a `startTurn` SUCCESSIVO al buildroad (CivInfoTransientCache.kt:299-301),
+    # quindi il count è "delayed" di 1 turno rispetto al completamento effettivo della strada.
+    # Esclude la capitale stessa (è connessa a sé per definizione): contiamo solo le città
+    # con `isOriginalCapital == False` (proxy: capitale è sempre l'originale in Fase 2 senza guerre).
+    cities_connected_to_capital: int = 0
 
 
 class UncivStateParser:
@@ -288,6 +299,30 @@ class UncivStateParser:
             cs.territory_luxury = lux
             cs.territory_bonus = bonus_cnt
 
+        # File 24 — tile con strada: Tile.roadStatus serializzato; default "None"
+        # significa "nessuna strada" e nel save può apparire come:
+        #   - chiave assente (default omesso)
+        #   - stringa "None" (omessa di solito ma difensivamente trattata)
+        # Qualsiasi altro valore ("Road", "Railroad") conta come strada presente.
+        tiles_with_road: set[tuple[int, int]] = set()
+        for t in tile_list:
+            road_status = t.get('roadStatus')
+            if not road_status or road_status == 'None':
+                continue
+            pos = t.get('position', {})
+            tiles_with_road.add((int(pos.get('x', 0)), int(pos.get('y', 0))))
+
+        # File 24 — città non-capitale connesse alla capitale (proxy serializzabile).
+        # Il flag City.connectedToCapitalStatus viene aggiornato a startTurn SUCCESSIVO
+        # al buildroad effettivo (CivInfoTransientCache.kt:299-301), quindi delayed di 1 turno.
+        # Escludiamo la capitale stessa: in Fase 2 (India senza guerre) la capitale
+        # è sempre l'originale → filtro `isOriginalCapital == True` la identifica univocamente.
+        cities_connected_to_capital = sum(
+            1 for cr in civ.get('cities', [])
+            if cr.get('connectedToCapitalStatus') is True
+            and cr.get('isOriginalCapital') is not True
+        )
+
         # Diplomazia — at war se diplomaticStatus == 'War'
         diplomacy: dict = civ.get('diplomacy', {})
         at_war = any(
@@ -331,6 +366,9 @@ class UncivStateParser:
             # TODO: parsing faith — religionManager.storedFaith è leggibile; per ottenere il delta
             # va memorizzato lo stato precedente in UncivEnv (come si fa già per stored_culture).
             faith_per_turn=0.0,
+            # File 24 — campi per BUILD_ROAD / reward "city_connected_to_capital".
+            tiles_with_road=tiles_with_road,
+            cities_connected_to_capital=cities_connected_to_capital,
         )
 
     def _find_player_civ(self, raw: dict) -> dict:
@@ -427,17 +465,22 @@ class UncivStateParser:
         selected_city: Optional[CityState] = None,
     ) -> np.ndarray:
         """
-        Converte GameState in vettore numpy (52,) float32.
+        Converte GameState in vettore numpy (64,) float32.
 
         Layout:
           [0-5]   Globale: turn, gold, happiness, science/turn, culture/turn, n_cities
-          [6-21]  Città 1: pop, food_prog, prod_prog, gold/t, food/t, prod/t,
-                           n_buildings, has_monument…has_market, tiles_worked, x, y
-          [22-29] Tech: n_techs, tech_progress, has_agriculture…has_animal_husbandry
-          [30-37] Unità: n_warriors, n_settlers, n_other, warrior_xy, settler_xy, explored
-          [38-45] Città 2 (zeros se assente)
-          [46-47] Diplomazia: n_known_civs, at_war
-          [48-51] Unità selezionata: sel_x, sel_y, sel_movement, tiles_explored_ratio
+          [6-24]  Città 1 (19): pop, food_prog, prod_prog, gold/t, food/t, prod/t,
+                                n_buildings, building flags (9), tiles_worked, x, y
+          [25-32] Tech (8): n_techs, tech_progress, flag_agriculture…flag_animal_husbandry
+          [33-40] Unità (8): n_warriors, n_settlers, n_other, warrior_xy, settler_xy, explored
+          [41-50] Città 2 (10) (zeros se assente)
+          [51-52] Diplomazia (2): n_known_civs, at_war
+          [53-56] Unità selezionata (4): sel_x, sel_y, sel_movement, tiles_explored_ratio
+          [57-60] Risorse (4) — File 22 C2
+          [61-63] Trade-network (3) — File 24:
+                  [61] connected_cities_ratio,
+                  [62] roads_built_count_norm,
+                  [63] selected_unit_on_road
         """
         total = float(state.total_tiles) or 1.0
         r = float(state.map_radius) or 10.0
@@ -568,6 +611,31 @@ class UncivStateParser:
             np.clip(_nearby_res(selected_unit, 'Luxury') / 10.0, 0.0, 1.0),
         ]
 
+        # --- Trade-network (3) — File 24 ---
+        # [61] connected_cities_ratio = città non-capitale connesse / totale non-capitali, clip [0,1].
+        #      La capitale è "connessa a sé stessa" e non rientra nel denominatore.
+        # [62] roads_built_count_norm = len(tiles_with_road) / 50.0, clip [0,1].
+        # [63] selected_unit_on_road = 1.0 se Worker selezionato sta su tile con road, 0.0 altrimenti.
+        n_cities = len(state.cities)
+        non_capital_total = max(1, n_cities - 1)
+        cities_connected = int(getattr(state, 'cities_connected_to_capital', 0) or 0)
+        connected_cities_ratio = float(np.clip(cities_connected / non_capital_total, 0.0, 1.0))
+
+        tiles_with_road = getattr(state, 'tiles_with_road', set()) or set()
+        roads_built_count_norm = float(np.clip(len(tiles_with_road) / 50.0, 0.0, 1.0))
+
+        selected_unit_on_road = 0.0
+        if (selected_unit is not None
+                and selected_unit.name == 'Worker'
+                and (selected_unit.x, selected_unit.y) in tiles_with_road):
+            selected_unit_on_road = 1.0
+
+        obs += [
+            connected_cities_ratio,
+            roads_built_count_norm,
+            selected_unit_on_road,
+        ]
+
         result = np.array(obs, dtype=np.float32)
-        assert result.shape == (61,), f"Expected (61,), got {result.shape}"
+        assert result.shape == (64,), f"Expected (64,), got {result.shape}"
         return result

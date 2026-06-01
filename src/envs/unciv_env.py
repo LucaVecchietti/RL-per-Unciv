@@ -35,8 +35,8 @@ class UncivEnv(gym.Env):
     """
     Ambiente Gymnasium per Unciv — Fase 2.C (espansione + risorse).
 
-    Action space: Discrete(23) — edifici + unità + skip + 6 direzioni hex + FoundCity + Improve.
-    Observation space: Box(61,) float32 (Città1 = città selezionata; +4 feature risorse C2).
+    Action space: Discrete(24) — edifici + unità + skip + 6 direzioni hex + FoundCity + Improve + BuildRoad.
+    Observation space: Box(64,) float32 (Città1 = città selezionata; +4 feature risorse C2; +3 feature trade-network File 24).
     Per-entity rotation: città_0 step → … → unità_0 step → … → advance turn.
     Movimento e fondazione città delegati al motore Unciv.
     """
@@ -99,20 +99,25 @@ class UncivEnv(gym.Env):
         buildings = sorted(self._building_names)
         units = sorted(self._unit_names)
         move_names = [f"MOVE_{c}" for c in _MOVE_CLOCKS]
-        action_list = buildings + units + [None] + move_names + ["FoundCity", "Improve"]
+        # File 24 — BUILD_ROAD aggiunta in coda all'ACTION_MAP (dopo Improve).
+        action_list = buildings + units + [None] + move_names + ["FoundCity", "Improve", "BUILD_ROAD"]
         self.ACTION_MAP: dict[int, Optional[str]] = {i: name for i, name in enumerate(action_list)}
         self._skip_idx: int = action_list.index(None)
         self._move_start_idx: int = self._skip_idx + 1
         self._found_city_idx: int = action_list.index("FoundCity")
         self._improve_idx: int = action_list.index("Improve")
+        # File 24 — indice azione BUILD_ROAD (Worker costruisce strada sul tile corrente).
+        self._build_road_idx: int = action_list.index("BUILD_ROAD")
         self._n_construction_actions: int = len(buildings) + len(units)
         # mappa indice azione → direzione hex (clock)
         self._action_to_clock: dict[int, int] = {
             self._move_start_idx + i: c for i, c in enumerate(_MOVE_CLOCKS)
         }
 
+        # File 24 — obs vector cresce da 61 a 64 (3 feature trade-network: connected_cities_ratio,
+        # roads_built_count_norm, selected_unit_on_road).
         self.observation_space = gym.spaces.Box(
-            low=0.0, high=1.0, shape=(61,), dtype=np.float32
+            low=0.0, high=1.0, shape=(64,), dtype=np.float32
         )
         self.action_space = gym.spaces.Discrete(len(self.ACTION_MAP))
 
@@ -158,6 +163,11 @@ class UncivEnv(gym.Env):
         self._ep_tech_progress_ratio: float = 0.0
         self._ep_cities_alive_bonus_total: float = 0.0
 
+        # File 24 — contatori road/trade-network per-episodio (esposti via info dict).
+        self._ep_roads_built: int = 0
+        self._ep_road_actions_attempted: int = 0
+        self._ep_road_actions_succeeded: int = 0
+
     # ------------------------------------------------------------------
     # Metodi obbligatori Gymnasium
     # ------------------------------------------------------------------
@@ -191,6 +201,10 @@ class UncivEnv(gym.Env):
         self._units_stuck_last_turn = 0
         self._ep_tech_progress_ratio = 0.0
         self._ep_cities_alive_bonus_total = 0.0
+        # File 24 — reset contatori road/trade-network
+        self._ep_roads_built = 0
+        self._ep_road_actions_attempted = 0
+        self._ep_road_actions_succeeded = 0
         self._start_new_game()
         self._current_state = self.parser.parse(self.save_path)
         self._pending_cities = list(self._current_state.cities)
@@ -235,6 +249,9 @@ class UncivEnv(gym.Env):
             self._apply_found_city(unit)
         elif action == self._improve_idx:
             self._apply_improve(unit)
+        elif action == self._build_road_idx:
+            # File 24 — Worker costruisce una strada sul tile corrente.
+            self._apply_build_road(unit)
         else:
             self._apply_movement(action, unit)
         self._unit_rotation_index += 1
@@ -361,6 +378,12 @@ class UncivEnv(gym.Env):
                         and (unit.x, unit.y) in self._current_state.resource_tiles
                         and (unit.x, unit.y) not in self._current_state.resource_connected_tiles):
                     mask[self._improve_idx] = True
+                # File 24 — BUILD_ROAD valido se Worker su tile SENZA road già presente.
+                # NON controlliamo la tech "The Wheel" lato Python: la JVM ritorna
+                # `illegal cannot_build` se mancante (cleaner).
+                if (unit.name == "Worker"
+                        and (unit.x, unit.y) not in getattr(self._current_state, 'tiles_with_road', set())):
+                    mask[self._build_road_idx] = True
         return mask
 
     def render(self) -> None:
@@ -445,6 +468,21 @@ class UncivEnv(gym.Env):
         if result.get("success"):
             self._ep_improvements_built += 1
 
+    def _apply_build_road(self, unit: UnitState) -> None:
+        """Fa costruire una strada al Worker. Risultato no-op se la JVM ritorna fail.
+
+        File 24 — il flag `City.connectedToCapitalStatus` viene aggiornato dal motore
+        al `startTurn` successivo (transient cache), quindi l'eventuale reward
+        `city_connected_to_capital` arriva 1 turno dopo il completamento della road.
+        """
+        if unit.id < 0:
+            return
+        self._ep_road_actions_attempted += 1
+        result = self.headless.build_road(self.save_path, unit.id)
+        if result.get("success"):
+            self._ep_roads_built += 1
+            self._ep_road_actions_succeeded += 1
+
     def _advance_game_turn(self) -> tuple[np.ndarray, float, bool, bool, dict]:
         """Avanza turno Unciv, calcola reward, restituisce output step."""
         self._prev_state = self._current_state
@@ -526,6 +564,11 @@ class UncivEnv(gym.Env):
             # File 23.1 — diagnostica shaping reward
             "tech_progress_ratio":      self._ep_tech_progress_ratio,
             "cities_alive_bonus_total": self._ep_cities_alive_bonus_total,
+            # File 24 — road / trade-network metrics
+            "roads_built":                 self._ep_roads_built,
+            "cities_connected_to_capital": getattr(curr, 'cities_connected_to_capital', 0),
+            "road_actions_attempted":      self._ep_road_actions_attempted,
+            "road_actions_succeeded":      self._ep_road_actions_succeeded,
         }
         return obs, reward, terminated, truncated, info
 

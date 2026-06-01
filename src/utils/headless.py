@@ -212,6 +212,31 @@ class UncivHeadless:
             return [int(c) for c in response.split()[1:]]
         return []
 
+    def _parse_improving_response(self, response: str) -> dict:
+        """
+        Parser condiviso per le risposte con prefisso "improving " usate sia
+        da `improve` sia da `buildroad`.
+
+        Formato risposta:
+            "improving <name...> <turns>"
+        dove <name...> può contenere spazi (es. "Oil well").
+
+        Returns:
+            dict: {"success": True, "improvement": str, "turns": int} se ok,
+                  altrimenti {"success": False, "reason": str}.
+        """
+        if not response.startswith("improving "):
+            return {"success": False, "reason": response}
+        parts = response.split()
+        # parts[0]="improving", parts[-1]=turni, parts[1:-1]=nome (>=1 token)
+        if len(parts) >= 3:
+            try:
+                turns = int(parts[-1])
+            except ValueError:
+                return {"success": False, "reason": f"risposta improving malformata: {response!r}"}
+            return {"success": True, "improvement": " ".join(parts[1:-1]), "turns": turns}
+        return {"success": False, "reason": f"risposta improving malformata: {response!r}"}
+
     def build_improvement(self, save_path: Path, unit_id: int) -> dict:
         """
         Fa costruire al Worker il miglioramento che connette la risorsa sul suo tile.
@@ -222,18 +247,26 @@ class UncivHeadless:
         """
         save_path = Path(save_path)
         response = self._send_command(f"improve {save_path.as_posix()} {unit_id}")
-        if response.startswith("improving "):
-            parts = response.split()
-            # Il nome del miglioramento può contenere spazi (es. "Oil well").
-            # Protocollo: parts[0]="improving", parts[-1]=turni, parts[1:-1]=nome.
-            if len(parts) >= 3:
-                try:
-                    turns = int(parts[-1])
-                except ValueError:
-                    return {"success": False, "reason": f"risposta improving malformata: {response!r}"}
-                return {"success": True, "improvement": " ".join(parts[1:-1]), "turns": turns}
-            return {"success": False, "reason": f"risposta improving malformata: {response!r}"}
-        return {"success": False, "reason": response}
+        return self._parse_improving_response(response)
+
+    def build_road(self, save_path: Path, unit_id: int) -> dict:
+        """
+        Fa costruire una strada (Road) al Worker sul tile corrente.
+
+        Il comando server `buildroad <path> <unitId>` riusa lo stesso prefisso
+        "improving " di `improve` (vedi Sessione 41 fix), quindi parser unico.
+
+        Args:
+            save_path: file di salvataggio da aggiornare in-place.
+            unit_id: id dell'unità (campo `id` nel JSON).
+
+        Returns:
+            dict: {"success": True, "improvement": "Road", "turns": int} se avviato,
+                  altrimenti {"success": False, "reason": ...}.
+        """
+        save_path = Path(save_path)
+        response = self._send_command(f"buildroad {save_path.as_posix()} {unit_id}")
+        return self._parse_improving_response(response)
 
     def found_city(self, save_path: Path, unit_id: int) -> dict:
         """

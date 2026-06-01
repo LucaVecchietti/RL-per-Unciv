@@ -41,6 +41,16 @@ REWARD_WEIGHTS = {
     "units_stuck_penalty":  0.02,  # per unità stuck nel turno
     "happiness_bonus":      0.05,  # cap implicito = peso (one-shot per turno)
     "building_diversity":   0.2,   # una tantum per ogni building nuovo nel set civ (45.1: 0.5→0.2 per ridurre farming bias mono-città)
+
+    # --- Nuovi in File 24: rete commerciale / road ---
+    # Event-based, alto: ogni nuova città connessa alla capitale = grosso boost (delta non-negativo).
+    # NB: il flag `connectedToCapitalStatus` è aggiornato dal motore al startTurn SUCCESSIVO al
+    # buildroad effettivo (transient cache), quindi il reward arriva 1 turno dopo. Documentato.
+    "city_connected_to_capital": 4.0,
+    # Denso piccolo: piccolo gradiente per ogni road posata, evita reward hacking (spam Road su
+    # tile scollegati). Decisione di tuning: la spec File 24 lo lascia opzionale, lo teniamo
+    # basso (0.3) come bootstrap del Worker — sopprimibile via override yaml a 0.0 se necessario.
+    "road_built": 0.3,
 }
 
 
@@ -193,6 +203,30 @@ def compute_reward(
         new_distinct = curr_buildings_set - prev_buildings_set
         if new_distinct:
             reward += w["building_diversity"] * len(new_distinct)
+
+    # --- 12. File 24 — Connessione capitale (event-based) ---
+    # Delta non-negativo del count di città non-capitale connesse via trade-network.
+    # NB: il motore Unciv aggiorna `connectedToCapitalStatus` al startTurn successivo
+    # al buildroad effettivo (transient cache), quindi il reward arriva 1 turno dopo.
+    if "city_connected_to_capital" in w:
+        delta_conn = max(
+            0,
+            int(getattr(curr, 'cities_connected_to_capital', 0) or 0)
+            - int(getattr(prev, 'cities_connected_to_capital', 0) or 0),
+        )
+        if delta_conn > 0:
+            reward += w["city_connected_to_capital"] * delta_conn
+
+    # --- 13. File 24 — Strada costruita (denso, piccolo) ---
+    # Piccolo gradiente per ogni road posata nel turno: delta non-negativo del set
+    # `tiles_with_road`. Peso volutamente basso per evitare reward hacking
+    # (spam Road su tile scollegati). Override yaml a 0.0 disattiva il blocco.
+    if "road_built" in w:
+        prev_roads = getattr(prev, 'tiles_with_road', set()) or set()
+        curr_roads = getattr(curr, 'tiles_with_road', set()) or set()
+        delta_road = max(0, len(curr_roads) - len(prev_roads))
+        if delta_road > 0:
+            reward += w["road_built"] * delta_road
 
     return float(reward)
 

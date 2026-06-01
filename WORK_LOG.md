@@ -5,6 +5,58 @@
 
 ---
 
+## [2026-06-01] — Sessione 47 — Implementazione File 24 (buildroad + reward rete commerciale)
+
+### Obiettivo sessione
+Implementare File 24 (spec in `md_file_x_claude_code/24_buildroad.md`): nuovo comando server `buildroad`, azione RL `BUILD_ROAD`, 3 feature obs (trade network), 2 nuovi pesi reward (`city_connected_to_capital`, `road_built`).
+
+### Metodo (skill `/team implement`)
+Tre agenti in parallelo:
+- `unciv-engine`: Kotlin `buildroad` in DesktopLauncher.kt + rebuild JAR (BUILD SUCCESSFUL 31s) + wrapper Python `build_road` con refactor `_parse_improving_response` condiviso + nuovi campi parser
+- `rl-trainer`: azione `BUILD_ROAD` in coda ad ACTION_MAP + masking Worker+no-road + 3 feature obs + reward `city_connected_to_capital=4.0` + `road_built=0.3` + metriche callbacks
+- `tests-engineer`: 20 nuovi test + 8 test legacy aggiornati a shape (64,)/n=24
+
+### File modificati
+- `unciv/Unciv/desktop/src/com/unciv/app/desktop/DesktopLauncher.kt` (modificato — comando `buildroad`, gitignored)
+- `unciv/Unciv.jar` (ricompilato, gitignored)
+- `src/utils/headless.py` (modificato — `build_road()`, helper condiviso `_parse_improving_response`)
+- `src/parsers/state_parser.py` (modificato — `GameState.tiles_with_road: set`, `GameState.cities_connected_to_capital: int`, 3 nuove feature in `to_observation_vector` → shape `(64,)`)
+- `src/envs/unciv_env.py` (modificato — `BUILD_ROAD` action, `_build_road_idx`, masking, `_apply_build_road`, info dict roads metrics)
+- `src/utils/reward.py` (modificato — `city_connected_to_capital: 4.0`, `road_built: 0.3` + logica delta)
+- `src/utils/callbacks.py` (modificato — metriche `roads_built_mean`, `cities_connected_mean`, `road_actions_attempted/succeeded_mean`, `BUILD_ROAD` in `_ACTION_NAMES`)
+- `config/default_config.yaml` (modificato — mirror pesi)
+- `tests/test_headless.py`, `tests/test_parser.py`, `tests/test_env.py`, `tests/test_callbacks.py`, `tests/test_reward.py` (modificati — 20 nuovi test + 8 aggiornati)
+- `CLAUDE.md` (modificato — tabella contratti: obs `(61,)→(64,)`, action `23→24`, nuova riga `Headless commands`)
+
+### Contratti che cambiano (aggiornati in CLAUDE.md)
+- Obs vector: `(61,)` → **`(64,)`** (+3 feature trade-network: connected_cities_ratio, roads_built_count_norm, selected_unit_on_road)
+- Action space: `Discrete(23)` → **`Discrete(24)`** (+1 azione BUILD_ROAD in coda)
+- Nuovi headless commands: `buildroad` (riusa prefisso `improving` esistente)
+
+### Test
+- [x] 184/184 verdi (164 baseline + 20 nuovi)
+
+### Note implementative
+- **Refactor `_parse_improving_response`**: helper condiviso tra `build_improvement` e `build_road` (stesso protocollo `"improving <name> <turns>"`).
+- **Limite noto** (delay 1 turno): `City.connectedToCapitalStatus` viene aggiornato dal motore a `startTurn` SUCCESSIVO al buildroad (vedi `CivInfoTransientCache.kt:299-301`). Il reward `city_connected_to_capital` arriva quindi 1 turno dopo il completamento effettivo della strada.
+- **`road_built: 0.3`**: introdotto come reward denso per dare gradiente al Worker (la spec lasciava opzionale; aggiunto a peso basso). Sopprimibile via yaml a 0.0.
+- **`cities_connected_to_capital` esclude la capitale**: `isOriginalCapital == True` è la fonte autoritativa in Fase 2 senza guerre.
+
+### Crash training osservato (Run #29)
+Durante run di validazione, training crashato in iter 4 (~16k step) con:
+```
+TimeoutError: JVM server timeout/EOF dopo 60s
+File "src/envs/unciv_env.py:618" advance_turn
+```
+ep_rew_mean 219 → 289 in 3 iter (pesi yaml ora attivi). Sintomo: timeout su `advance_turn` (60s), non su comandi unit. Probabile causa: save corrotto o stato che richiede troppo tempo per processare turn (es. molti Worker tutti su `improving Road` su tile bloccati). Da indagare nella prossima sessione.
+
+### TODO prossima sessione
+1. **Diagnosticare crash training** Run #29: TimeoutError su advance_turn. Possibili cause: save corrotto, stato che blocca `gameInfo.nextTurn()` (es. troppi worker su buildroad invalido?), oppure `connectedToCapitalStatus` calcolo costoso.
+2. **Run di validazione completo** dopo fix crash. Atteso con i pesi yaml ora attivi (Sessione 46 Bug #1): comportamento ben diverso da Run #28, ep_rew probabilmente più alto.
+3. **File 26.1 (plan)**: penalty militare cumulativa + milestone reward terminal + estensione building set Phase A+B+C.
+
+---
+
 ## [2026-05-31] — Sessione 46 — Fix 3 bug strutturali diagnosticati post Run #28
 
 ### Obiettivo sessione

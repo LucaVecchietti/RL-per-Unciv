@@ -42,8 +42,9 @@ def _get_idx(env: UncivEnv, name) -> int:
 
 
 def test_spaces(env):
-    assert env.observation_space.shape == (61,)
-    assert env.action_space.n == 23
+    # File 24 — action space cresce di +1 (BUILD_ROAD), obs di +3 (trade-network).
+    assert env.observation_space.shape == (64,)
+    assert env.action_space.n == 24
 
 
 def test_env_rank_uses_separate_save_files(tmp_path):
@@ -65,7 +66,8 @@ def test_step_output_shape(env):
         mock_parse.return_value = mock_state
         env._current_state = mock_state
         obs, reward, term, trunc, info = env.step(0)
-        assert obs.shape == (61,)
+        # File 24 — obs shape passa a (64,).
+        assert obs.shape == (64,)
         assert isinstance(reward, float)
         assert isinstance(term, bool)
 
@@ -220,7 +222,8 @@ def test_per_entity_rotation_transitions_to_unit_step(env):
         env._current_state = mock_state
         obs, reward, term, trunc, info = env.step(0)
 
-    assert obs.shape == (61,)
+    # File 24 — obs shape passa a (64,).
+    assert obs.shape == (64,)
     assert reward == 0.0
     assert term is False
     assert trunc is False
@@ -245,7 +248,8 @@ def test_per_entity_rotation_advances_turn_after_warrior(env):
         env._buffered_city_action = env._skip_idx
         obs, reward, term, trunc, info = env.step(env._skip_idx)
 
-    assert obs.shape == (61,)
+    # File 24 — obs shape passa a (64,).
+    assert obs.shape == (64,)
     assert env._step_type == "city"
     mock_adv.assert_called_once()
 
@@ -314,7 +318,8 @@ def test_obs_contains_selected_unit_coords(env):
     env._pending_units = [warrior]
 
     obs = env._get_obs()
-    assert obs.shape == (61,)
+    # File 24 — obs shape passa a (64,).
+    assert obs.shape == (64,)
     # x=0,y=0 con radius 10 → (0/10+1)/2 = 0.5 ; movement=2/2=1.0
     assert abs(obs[53] - 0.5) < 1e-5
     assert abs(obs[54] - 0.5) < 1e-5
@@ -535,3 +540,90 @@ def test_apply_action_sets_construction_queue(env, tmp_path):
     assert cc["currentConstructionIsUserSet"] is True
     assert "inProgressConstructions" in cc
     assert "currentConstruction" not in cc
+
+
+# --- File 24 — BUILD_ROAD action space + masking + step -----------------------
+
+
+def test_action_space_size_24(env):
+    """File 24 — action space cresce da 23 a 24 con l'aggiunta di BUILD_ROAD."""
+    assert env.action_space.n == 24
+    # L'indice BUILD_ROAD deve essere registrato e mappato sull'ACTION_MAP.
+    assert env.ACTION_MAP[env._build_road_idx] == "BUILD_ROAD"
+
+
+def test_build_road_masking_only_worker_no_road(env):
+    """Worker su tile senza road → mask BUILD_ROAD = True."""
+    worker = UnitState("Worker", x=0, y=0, movement_points=2.0, id=12)
+    state = _mock_state(units=[worker])
+    state.tiles_with_road = set()  # nessuna road
+    env._step_type = "unit"
+    env._pending_units = [worker]
+    env._unit_rotation_index = 0
+    env._current_state = state
+    with patch.object(env.headless, "legal_moves", return_value=[]):
+        masks = env.action_masks()
+    assert masks[env._build_road_idx]
+
+
+def test_build_road_masking_off_if_road_present(env):
+    """Worker su tile in tiles_with_road → mask BUILD_ROAD = False (no doppia road)."""
+    worker = UnitState("Worker", x=4, y=2, movement_points=2.0, id=12)
+    state = _mock_state(units=[worker])
+    state.tiles_with_road = {(4, 2)}  # road già presente sul tile del Worker
+    env._step_type = "unit"
+    env._pending_units = [worker]
+    env._unit_rotation_index = 0
+    env._current_state = state
+    with patch.object(env.headless, "legal_moves", return_value=[]):
+        masks = env.action_masks()
+    assert not masks[env._build_road_idx]
+
+
+def test_build_road_masking_off_for_non_worker(env):
+    """Unità non-Worker (Settler / Warrior) → mask BUILD_ROAD = False."""
+    settler = UnitState("Settler", x=0, y=0, movement_points=2.0, id=9)
+    state = _mock_state(units=[settler])
+    state.tiles_with_road = set()
+    env._step_type = "unit"
+    env._pending_units = [settler]
+    env._unit_rotation_index = 0
+    env._current_state = state
+    with patch.object(env.headless, "legal_moves", return_value=[]):
+        masks_settler = env.action_masks()
+    assert not masks_settler[env._build_road_idx]
+
+    warrior = UnitState("Warrior", x=0, y=0, movement_points=2.0, id=10)
+    state2 = _mock_state(units=[warrior])
+    state2.tiles_with_road = set()
+    env._pending_units = [warrior]
+    env._unit_rotation_index = 0
+    env._current_state = state2
+    with patch.object(env.headless, "legal_moves", return_value=[]):
+        masks_warrior = env.action_masks()
+    assert not masks_warrior[env._build_road_idx]
+
+
+def test_build_road_action_calls_headless(env):
+    """step(BUILD_ROAD_idx) → invoca env.headless.build_road(save_path, unit.id)."""
+    worker = UnitState("Worker", x=1, y=1, movement_points=2.0, id=77)
+    state = _mock_state(units=[worker])
+    state.tiles_with_road = set()
+    env._current_state = state
+    env._step_type = "unit"
+    env._pending_units = [worker]
+    env._unit_rotation_index = 0
+    env._buffered_city_action = env._skip_idx
+
+    with patch.object(env.headless, "build_road",
+                      return_value={"success": True, "improvement": "Road", "turns": 4}) as mock_br, \
+         patch.object(env, "_advance_turn"), \
+         patch.object(env, "_advance_tech"), \
+         patch.object(env.parser, "parse", return_value=state):
+        env.step(env._build_road_idx)
+
+    mock_br.assert_called_once()
+    args, _kwargs = mock_br.call_args
+    # Argomenti posizionali attesi: (save_path, unit.id).
+    assert args[0] == env.save_path
+    assert args[1] == worker.id

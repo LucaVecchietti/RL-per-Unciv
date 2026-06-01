@@ -316,3 +316,52 @@ def test_build_improvement_malformed_no_turns(headless, tmp_path):
         result = headless.build_improvement(save, 12)
     assert result["success"] is False
     assert "malformata" in result["reason"]
+
+
+# --- File 24 — wrapper build_road --------------------------------------------
+
+
+def test_build_road_success(headless, tmp_path):
+    """Risposta 'improving Road <turns>' → success con improvement=Road e turns int."""
+    save = tmp_path / "game.json"
+    save.write_text('{"turns": 2}')
+    mock_proc = _make_popen_mock(["improving Road 7"])
+    with patch("subprocess.Popen", return_value=mock_proc):
+        result = headless.build_road(save, 12)
+    assert result["success"] is True
+    assert result["improvement"] == "Road"
+    assert result["turns"] == 7
+
+
+def test_build_road_illegal_cannot_build(headless, tmp_path):
+    """Risposta 'illegal cannot_build' → success=False con reason che contiene cannot_build."""
+    save = tmp_path / "game.json"
+    save.write_text('{"turns": 2}')
+    mock_proc = _make_popen_mock(["illegal cannot_build"])
+    with patch("subprocess.Popen", return_value=mock_proc):
+        result = headless.build_road(save, 12)
+    assert result["success"] is False
+    assert "cannot_build" in result["reason"]
+
+
+def test_build_road_no_unit(headless, tmp_path):
+    """Risposta 'error no_unit' → success=False (unità non trovata)."""
+    save = tmp_path / "game.json"
+    save.write_text('{"turns": 2}')
+    mock_proc = _make_popen_mock(["error no_unit"])
+    with patch("subprocess.Popen", return_value=mock_proc):
+        result = headless.build_road(save, 999)
+    assert result["success"] is False
+
+
+def test_build_road_skips_log_noise(headless, tmp_path):
+    """Una riga di log JVM prima di 'improving Road ...' va ignorata."""
+    save = tmp_path / "game.json"
+    save.write_text('{"turns": 2}')
+    noise = "2026-05-24T17:24:01Z [SoundPlayer$Preloader] Preload UncivSound(promote)"
+    mock_proc = _make_popen_mock([noise, "improving Road 5"])
+    with patch("subprocess.Popen", return_value=mock_proc):
+        result = headless.build_road(save, 12)
+    assert result["success"] is True
+    assert result["improvement"] == "Road"
+    assert result["turns"] == 5

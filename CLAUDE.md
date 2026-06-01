@@ -50,11 +50,12 @@ unciv-rl-agent/
 ## Contratti critici tra moduli
 | Contratto | Valore attuale | File coinvolti |
 |---|---|---|
-| Dimensione observation vector | `(61,)` float32 | `state_parser.py` ↔ `unciv_env.py` |
-| Numero azioni | `23` (Discrete) — 9 edifici + 5 unità + skip + 6 direzioni hex + FoundCity + Improve | `unciv_env.py` ↔ `train.py` |
+| Dimensione observation vector | `(64,)` float32 (File 24: +3 trade-network) | `state_parser.py` ↔ `unciv_env.py` |
+| Numero azioni | `24` (Discrete) — 9 edifici + 5 unità + skip + 6 direzioni hex + FoundCity + Improve + BUILD_ROAD | `unciv_env.py` ↔ `train.py` |
 | Nome civilizzazione default | `"India"` | `state_parser.py`, `unciv_env.py` |
 | Save file per env | `saves/current_game_{rank}.json` | `unciv_env.py` ↔ `train.py` |
 | Advance turn | `UncivHeadless` in `_advance_turn` | `headless.py` ↔ `unciv_env.py` |
+| Headless commands | `advance`, `move`, `legalmoves`, `foundcity`, `improve`, `buildroad` | `headless.py` ↔ `DesktopLauncher.kt` |
 
 > ⚠️ Se modifichi uno di questi valori, aggiorna **tutti** i file coinvolti e la tabella qui sopra.
 

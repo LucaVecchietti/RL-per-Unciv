@@ -62,7 +62,8 @@ def test_observation_vector_shape():
         map_width=20, map_height=20
     )
     obs = parser.to_observation_vector(mock_state)
-    assert obs.shape == (61,)
+    # File 24 — shape passa da (61,) a (64,): +3 feature trade-network globali.
+    assert obs.shape == (64,)
     assert obs.dtype.name == "float32"
 
 
@@ -209,7 +210,8 @@ def test_coord_normalization_handles_negative():
     )
     sel = UnitState("Warrior", x=-10, y=0, movement_points=2.0, id=1)
     obs = parser.to_observation_vector(st, selected_unit=sel)
-    assert obs.shape == (61,)
+    # File 24 — shape passa da (61,) a (64,).
+    assert obs.shape == (64,)
     # x=-10, radius 10 → (-10/10 + 1)/2 = 0.0 ; y=0 → 0.5
     assert abs(obs[53] - 0.0) < 1e-5
     assert abs(obs[54] - 0.5) < 1e-5
@@ -349,3 +351,117 @@ def test_city_state_territory_bonus_count():
     )
     state = _save_with(parser, raw)
     assert state.cities[0].territory_bonus == 3
+
+
+# --- File 24 — campi GameState + obs trade-network ----------------------------
+
+
+def test_game_state_tiles_with_road_field() -> None:
+    """GameState.tiles_with_road esiste e default = set() vuoto."""
+    from src.parsers.state_parser import GameState
+    st = GameState(
+        turn=1, current_player="India", gold=0, happiness=5,
+        cities=[], techs_researched=[], current_tech=None,
+        map_width=20, map_height=20,
+    )
+    assert hasattr(st, "tiles_with_road")
+    assert st.tiles_with_road == set()
+
+
+def test_game_state_cities_connected_to_capital_field() -> None:
+    """GameState.cities_connected_to_capital esiste e default = 0."""
+    from src.parsers.state_parser import GameState
+    st = GameState(
+        turn=1, current_player="India", gold=0, happiness=5,
+        cities=[], techs_researched=[], current_tech=None,
+        map_width=20, map_height=20,
+    )
+    assert hasattr(st, "cities_connected_to_capital")
+    assert st.cities_connected_to_capital == 0
+
+
+def test_obs_shape_64_after_file_24() -> None:
+    """to_observation_vector(state).shape == (64,) dopo File 24 (+3 feature globali)."""
+    from src.parsers.state_parser import GameState, CityState
+    parser = UncivStateParser()
+    st = GameState(
+        turn=10, current_player="India", gold=200, happiness=5,
+        cities=[CityState("Rome", 3, "Monument", [], 200, 0)],
+        techs_researched=["Agriculture"], current_tech="Writing",
+        map_width=20, map_height=20,
+    )
+    obs = parser.to_observation_vector(st)
+    assert obs.shape == (64,)
+
+
+def test_obs_connected_cities_ratio() -> None:
+    """obs[61] = connected_cities_ratio = città non-capitale connesse / totale non-capitali.
+
+    Setup: 3 città (1 capitale + 2 non-capitale), 1 non-capitale connessa.
+    Ratio atteso = 1/2 = 0.5.
+    """
+    from src.parsers.state_parser import GameState, CityState
+    parser = UncivStateParser()
+    cities = [
+        CityState("Rome", 5, "Monument", [], 200, 0),   # capitale
+        CityState("Delhi", 3, "", [], 200, 0),          # non-capitale connessa
+        CityState("Mumbai", 3, "", [], 200, 0),         # non-capitale non connessa
+    ]
+    st = GameState(
+        turn=10, current_player="India", gold=200, happiness=5,
+        cities=cities, techs_researched=[], current_tech=None,
+        map_width=20, map_height=20,
+    )
+    st.cities_connected_to_capital = 1
+    obs = parser.to_observation_vector(st)
+    assert abs(obs[61] - 0.5) < 1e-5
+
+
+def test_obs_roads_built_count_norm() -> None:
+    """obs[62] = roads_built_count / 50.0.
+
+    tiles_with_road con 10 elementi → 10/50 = 0.2.
+    """
+    from src.parsers.state_parser import GameState, CityState
+    parser = UncivStateParser()
+    st = GameState(
+        turn=10, current_player="India", gold=200, happiness=5,
+        cities=[CityState("Rome", 3, "Monument", [], 200, 0)],
+        techs_researched=[], current_tech=None,
+        map_width=20, map_height=20,
+    )
+    st.tiles_with_road = {(i, 0) for i in range(10)}
+    obs = parser.to_observation_vector(st)
+    assert abs(obs[62] - 0.2) < 1e-5
+
+
+def test_obs_selected_unit_on_road_true() -> None:
+    """obs[63] = 1.0 se Worker selezionato sta su tile con road."""
+    from src.parsers.state_parser import GameState, CityState, UnitState
+    parser = UncivStateParser()
+    st = GameState(
+        turn=10, current_player="India", gold=200, happiness=5,
+        cities=[CityState("Rome", 3, "Monument", [], 200, 0)],
+        techs_researched=[], current_tech=None,
+        map_width=20, map_height=20,
+    )
+    st.tiles_with_road = {(2, 3)}
+    worker = UnitState("Worker", x=2, y=3, movement_points=2.0, id=42)
+    obs = parser.to_observation_vector(st, selected_unit=worker)
+    assert abs(obs[63] - 1.0) < 1e-5
+
+
+def test_obs_selected_unit_on_road_false() -> None:
+    """obs[63] = 0.0 se Worker selezionato NON è su tile con road."""
+    from src.parsers.state_parser import GameState, CityState, UnitState
+    parser = UncivStateParser()
+    st = GameState(
+        turn=10, current_player="India", gold=200, happiness=5,
+        cities=[CityState("Rome", 3, "Monument", [], 200, 0)],
+        techs_researched=[], current_tech=None,
+        map_width=20, map_height=20,
+    )
+    st.tiles_with_road = {(5, 5)}
+    worker = UnitState("Worker", x=2, y=3, movement_points=2.0, id=42)
+    obs = parser.to_observation_vector(st, selected_unit=worker)
+    assert abs(obs[63] - 0.0) < 1e-5

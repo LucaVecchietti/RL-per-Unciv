@@ -56,7 +56,8 @@ def test_unciv_metrics_collects_episode_info():
 def test_action_distribution_callback_instantiation():
     cb = ActionDistributionCallback(log_freq=5000)
     assert cb.log_freq == 5000
-    assert cb._action_counts.shape == (23,)
+    # File 24 — _ACTION_NAMES cresce a 24 (BUILD_ROAD aggiunto in coda).
+    assert cb._action_counts.shape == (24,)
 
 
 def test_action_distribution_on_step_returns_true():
